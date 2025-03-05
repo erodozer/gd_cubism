@@ -40,7 +40,7 @@ public:
     }
     String _get_save_extension() const { return "tscn"; }
     String _get_resource_type() const { return "PackedScene"; }
-    double _get_priority() const { return 1.0; }
+    float _get_priority() const { return 1.0f; }
     int32_t _get_import_order() const { return 0; }
 
     Error _import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options, const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const override;
