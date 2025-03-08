@@ -109,10 +109,6 @@ Dictionary GDCubismUserModel::get_mesh_dict() const {
 }
 
 void GDCubismUserModel::_update(const float delta) {
-    if (this->get_animation_player() != nullptr) {
-        this->get_animation_player()->advance(delta);
-    }
-    
     Array ary_parameter = this->get_parameters();
     for(Csm::csmInt32 index = 0; index < ary_parameter.size(); index++ ) {
         GDCubismParameter *param = Object::cast_to<GDCubismParameter>(ary_parameter[index]);
@@ -120,7 +116,11 @@ void GDCubismUserModel::_update(const float delta) {
             param->apply(this->internal_model->GetModel());
         }
     }
-
+    
+    if (this->get_animation_player() != nullptr) {
+        this->get_animation_player()->advance(delta);
+    }
+    
     if (this->get_expression_controller() != nullptr) {
         if (this->get_animation_player() == nullptr || !this->get_animation_player()->is_playing()) {
             this->get_expression_controller()->update(this->internal_model->GetModel(), delta);

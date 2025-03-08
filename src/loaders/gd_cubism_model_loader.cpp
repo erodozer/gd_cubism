@@ -357,7 +357,9 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, const b
         anim_player->set_owner(model);
         anim_player->set_name(MOTION_CONTROLLER_NODE);
         anim_player->set_root_node(NodePath(".."));
-        anim_player->set_deterministic(true);
+
+        // do not use deterministic, as it will clear out expression and manual overrides
+        anim_player->set_deterministic(false);
 
         // create reset track for deterministic playback
         {
@@ -386,6 +388,9 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, const b
                 }
             }
         }
+
+        anim_player->set_active(false);
+        anim_player->stop();
     }
 
     // Load Expressions
