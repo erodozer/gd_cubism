@@ -6,7 +6,7 @@
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <gdextension_interface.h>
 
-#include <CubismFramework.hpp>
+#include <CubismNativeFramework/src/CubismFramework.hpp>
 
 #include <loaders/gd_cubism_motion_loader.hpp>
 #include <private/internal_cubism_allocator.hpp>

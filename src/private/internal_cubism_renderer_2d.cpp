@@ -8,9 +8,9 @@
 #include <godot_cpp/classes/viewport_texture.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 
-#include <CubismFramework.hpp>
-#include <Model/CubismModel.hpp>
-#include <Rendering/CubismRenderer.hpp>
+#include <CubismNativeFramework/src/CubismFramework.hpp>
+#include <CubismNativeFramework/src/Model/CubismModel.hpp>
+#include <CubismNativeFramework/src/Rendering/CubismRenderer.hpp>
 
 #include <private/internal_cubism_renderer_2d.hpp>
 #include <private/internal_cubism_renderer_resource.hpp>

@@ -1,0 +1,42 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 915e975..f526db4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,9 +1,10 @@
+-cmake_minimum_required(VERSION 3.10)
++cmake_minimum_required(VERSION 3.30)
+ 
++project(Framework)
+ set(LIB_NAME Framework)
+ 
+ # Force static library.
+-add_library(${LIB_NAME} STATIC)
++add_library(${LIB_NAME} SHARED)
+ 
+ add_subdirectory(src)
+ 
+@@ -25,7 +26,7 @@ target_include_directories(${LIB_NAME}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../Core/include
+ )
+ # Add definitions.
+-target_compile_definitions(${LIB_NAME}
+-  PRIVATE
+-    ${FRAMEWORK_DEFINITIOINS}
+-)
++# target_compile_definitions(${LIB_NAME}
++#  PRIVATE
++#    ${FRAMEWORK_DEFINITIOINS}
++# )
+diff --git a/src/Rendering/CMakeLists.txt b/src/Rendering/CMakeLists.txt
+index a49a819..6bbeb79 100644
+--- a/src/Rendering/CMakeLists.txt
++++ b/src/Rendering/CMakeLists.txt
+@@ -7,7 +7,7 @@ target_sources(${LIB_NAME}
+ )
+ 
+ # Add specified rendering directory.
+-add_subdirectory(${FRAMEWORK_SOURCE})
++# add_subdirectory(${FRAMEWORK_SOURCE})
+ 
+ # Add include path set in application (Deprecated).
+ set(RENDER_INCLUDE_PATH

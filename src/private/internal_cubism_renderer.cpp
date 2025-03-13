@@ -3,8 +3,8 @@
 // ----------------------------------------------------------------- include(s)
 #include <gd_cubism.hpp>
 
-#include <CubismFramework.hpp>
-#include <Rendering/CubismRenderer.hpp>
+#include <CubismNativeFramework/src/CubismFramework.hpp>
+#include <CubismNativeFramework/src/Rendering/CubismRenderer.hpp>
 
 #ifdef GD_CUBISM_USE_RENDERER_2D
     #include <private/internal_cubism_renderer_2d.hpp>

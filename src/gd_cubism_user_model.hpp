@@ -12,10 +12,10 @@
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 
-#include <CubismFramework.hpp>
-#include <Math/CubismVector2.hpp>
-#include <Motion/ACubismMotion.hpp>
-#include <Motion/CubismMotionQueueEntry.hpp>
+#include <CubismNativeFramework/src/CubismFramework.hpp>
+#include <CubismNativeFramework/src/Math/CubismVector2.hpp>
+#include <CubismNativeFramework/src/Motion/ACubismMotion.hpp>
+#include <CubismNativeFramework/src/Motion/CubismMotionQueueEntry.hpp>
 
 #include <gd_cubism_effect.hpp>
 #include <gd_cubism_motion_entry.hpp>

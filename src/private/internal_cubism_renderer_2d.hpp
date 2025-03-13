@@ -14,7 +14,7 @@
 #include <godot_cpp/classes/sub_viewport.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 
-#include <Rendering/CubismRenderer.hpp>
+#include <CubismNativeFramework/src/Rendering/CubismRenderer.hpp>
 
 #include <private/internal_cubism_renderer_resource.hpp>
 #include <gd_cubism_user_model.hpp>

@@ -41,3 +41,7 @@ package.json
 thirdparty/CubismNativeFramework
 thirdparty/CubismSdkForNative*
 
+
+Core/
+
+demo/addons/gd_cubism/lib/

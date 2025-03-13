@@ -59,9 +59,7 @@ if os.path.isdir(CHECK_PATH) is True:
 
 
 # Add source files.
-env.Append(CPPPATH=["src/"])
-env.Append(CPPPATH=[os.path.join(CUBISM_NATIVE_CORE_DIR, "include")])
-
+env.Append(CPPPATH=["src/", "."])
 
 print("                   platform = {:s}".format(env["platform"]))
 print("                       arch = {:s}".format(env["arch"]))
@@ -149,20 +147,18 @@ elif env["platform"] == "ios":
 elif env["platform"] == "linux":
     o_cubism_lib = (
         Path(CUBISM_NATIVE_CORE_DIR)
-        .joinpath("lib")
+        .joinpath("dll")
         .joinpath(env["platform"])
         .joinpath(env["arch"])
-        .joinpath("libLive2DCubismCore.a")
+        .joinpath("libLive2DCubismCore.so")
     )
     env.Append(
-        LIBPATH=[
-            os.path.join(
-                CUBISM_NATIVE_CORE_DIR, "lib", "linux/{:s}".format(env["arch"])
-            )
+        LIBS=[
+            f"{CUBISM_NATIVE_CORE_DIR}/dll/linux/x86_64/libLive2DCubismCore.so",
+            f"CubismNativeFramework/build/libCubismNativeFramework.so"
         ]
     )
     print("                       libs = {:s}".format(str(o_cubism_lib)))
-    env.Append(LIBS=["Live2DCubismCore"])
 
 elif env["platform"] == "android":
     dict_arch = {
@@ -199,28 +195,6 @@ sources = glob("src/*.cpp")
 sources += glob("src/private/*.cpp")
 sources += glob("src/loaders/*.cpp")
 sources += glob("src/importers/*.cpp")
-
-env.Append(CPPPATH=[os.path.join(CUBISM_NATIVE_FRAMEWORK_DIR, "src")])
-
-sources_cubism = glob(os.path.join(CUBISM_NATIVE_FRAMEWORK_DIR, "src", "*.cpp"))
-
-for dirname in (
-    "Effect",
-    "Id",
-    "Math",
-    "Model",
-    "Motion",
-    "Physics",
-    "Rendering",
-    "Type",
-    "Utils",
-):
-    sources_cubism += glob(
-        os.path.join(CUBISM_NATIVE_FRAMEWORK_DIR, "src", dirname, "*.cpp")
-    )
-
-sources += sources_cubism
-
 
 #
 if env["target"] in ["editor", "template_debug"]:

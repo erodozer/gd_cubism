@@ -23,3 +23,13 @@ android.debug.arm32 = "bin/libgd_cubism.android.debug.arm32.so"
 android.release.arm32 = "bin/libgd_cubism.android.release.arm32.so"
 android.debug.arm64 = "bin/libgd_cubism.android.debug.arm64.so"
 android.release.arm64 = "bin/libgd_cubism.android.release.arm64.so"
+
+[dependencies]
+linux.debug = {
+    "lib/libLive2DCubismCore.so":"",
+    "lib/Framework.so":"",
+}
+linux.release = {
+    "lib/libLive2DCubismCore.so":"",
+    "lib/Framework.so":"",
+}
