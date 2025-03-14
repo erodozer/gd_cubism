@@ -26,14 +26,14 @@ protected:
         ClassDB::bind_method(D_METHOD("set_expression_library", "library"), &GDCubismExpressionController::set_expression_library);
         ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "expression_library"), "set_expression_library", "get_expression_library");
 
+		ClassDB::bind_method(D_METHOD("set_expression", "expression", "fade"), &GDCubismExpressionController::set_expression);
 		ClassDB::bind_method(D_METHOD("activate_expression", "expression", "fade"), &GDCubismExpressionController::activate_expression);
         ClassDB::bind_method(D_METHOD("deactivate_expression", "expression", "fade"), &GDCubismExpressionController::deactivate_expression);
 	}
 
 private:
 	Dictionary _expression_library;
-	Dictionary _activated_expressions;
-	bool _exclusive_mode;
+	Array _activated_expressions;
 	
 	double fade_time;
 	Array _queue;
@@ -51,8 +51,9 @@ public:
 	}
 	void set_mode(bool exclusive);
 	bool is_activated(const String expression) {
-		return this->_activated_expressions.get(expression, false);
+		return this->_activated_expressions.find(expression) >= 0;
 	}
+	void set_expression(const String expression, float fade);
 	void activate_expression(const String expression, float fade);
 	void deactivate_expression(const String expression, float fade);
 	void update(CubismModel *model, float delta);

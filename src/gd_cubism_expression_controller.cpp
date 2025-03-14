@@ -11,13 +11,6 @@ void GDCubismExpressionController::_ready() {
 	x["add"] = Dictionary();
 	x["mul"] = Dictionary();
 	x["rpl"] = Dictionary();
-
-	this->_queue[0] = x;
-	this->_queue[1] = x;
-}
-
-void GDCubismExpressionController::set_mode(bool exclusive) {
-
 }
 
 void GDCubismExpressionController::queue_expression(float fade) {
@@ -96,6 +89,12 @@ void GDCubismExpressionController::update(CubismModel *model, float delta) {
 			0.0, 1.0
 		);
 
+	Dictionary parameters;
+
+	// apply expressions to parameters, with the parameter value being the set by the most recently activated expression
+	for (int i = 0; i < this->_activated_expressions.size(); i++) {
+		
+	}
 	for (int i = 0; i < model->GetParameterCount(); i++) {
 		auto p = model->GetParameterId(i);
 		String p_name = p->GetString().GetRawString();
