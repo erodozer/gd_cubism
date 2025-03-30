@@ -3,7 +3,73 @@
 
 #include <godot_cpp/classes/json.hpp>
 #include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/animation_library.hpp>
+#include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+
+Array walk_files(String dir, String extension) {
+	Array files;
+
+	// pick files
+	{
+		Array dir_files = DirAccess::get_files_at(dir);
+		for (int i = 0; i < dir_files.size(); i++) {
+			String f = dir_files[i];
+			if (f.ends_with(extension)) {
+				files.append(dir.path_join(f));
+			}
+		}
+	}
+
+	// walk subdirectories
+	{
+		Array sub_dirs = DirAccess::get_directories_at(dir);
+		for (int i = 0; i < sub_dirs.size(); i++) {
+			String f = sub_dirs[i];
+			files.append_array(walk_files(dir.path_join(f), extension));
+		}
+	}
+
+	return files;
+}
+
+Ref<AnimationLibrary> GDCubismMotionLoader::load_motion_library(GDCubismUserModel *model) {
+    String assets = model->get_scene_file_path();
+
+    Ref<AnimationLibrary> animations;
+    animations.instantiate();
+        
+    // create reset track for deterministic playback
+    {
+        Ref<Animation> reset_anim;
+        reset_anim.instantiate();
+
+        Dictionary params = model->get_parameters();
+        Array keys = params.keys();
+        for (int i = 0; i < params.size(); i++) {
+            String p_name = keys[i];
+            int track_idx = reset_anim->add_track(Animation::TYPE_BEZIER);
+            Dictionary p = params[p_name];
+            reset_anim->track_set_path(track_idx, NodePath(".:" + p_name));
+            reset_anim->bezier_track_insert_key(track_idx, 0, (float)p["default"]);
+        }
+
+        animations->add_animation("RESET", reset_anim);
+    }
+    
+    ResourceLoader *res_loader = ResourceLoader::get_singleton();
+    Array motion_files = walk_files(assets.get_base_dir(), MOTION_FILE_EXTENSION);
+    for (int i = 0; i < motion_files.size(); i++) {
+        String motion = motion_files[i];
+        Ref<Animation> anim = res_loader->load(motion, "Animation");
+        if (anim.is_valid()) {
+            animations->add_animation(motion.get_file(), anim);
+        }
+    }
+
+    return animations;
+}
 
 Variant GDCubismMotionLoader::_load(const String& p_path, const String& p_original_path, bool p_use_sub_threads, int32_t p_cache_mode) const {
     String buffer = FileAccess::get_file_as_string(p_original_path);

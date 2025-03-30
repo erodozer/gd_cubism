@@ -3,7 +3,6 @@
 
 // ----------------------------------------------------------------- include(s)
 #include <CubismFramework.hpp>
-#include <Motion/CubismExpressionMotion.hpp>
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/classes/file_access.hpp>
@@ -11,7 +10,6 @@
 #include <godot_cpp/classes/node.hpp>
 #include <private/internal_cubism_user_model.hpp>
 #include <gd_cubism_effect.hpp>
-#include <gd_cubism_expression.hpp>
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)
@@ -31,13 +29,16 @@ protected:
 
 private:
 	CubismMotionManager* _motion_manager;
-	Csm::csmMap<Csm::csmString,Csm::CubismMotion*> _map_motion;
+	Csm::csmMap<String,Csm::CubismMotion*> _map_motion;
+	Csm::csmVector<Csm::CubismIdHandle> _list_eye_blink;
+	Csm::csmVector<Csm::CubismIdHandle> _list_lipsync;
+
 	String active_motion;
     
 public:
 	void set_active_motion(String motion_name) {
-		Csm::csmString csm_motion_name(motion_name.utf8().ptr());
-		Csm::CubismMotion *motion = this->_map_motion[csm_motion_name];
+		if (this->_motion_manager == nullptr) return;
+		Csm::CubismMotion *motion = this->_map_motion[motion_name];
 		ERR_FAIL_COND_MSG(motion == nullptr, "Unknown motion");
 
 		this->active_motion = motion_name;
@@ -52,24 +53,44 @@ public:
 		if (p_property.name != StringName("active_motion")) return;
 
 		Array motions;
-		for(csmMap<csmString,CubismMotion*>::const_iterator i = this->_map_motion.Begin(); i != this->_map_motion.End(); i++) {
-			csmString csm_motion_name = i->First;
-			String motion_name(csm_motion_name.GetRawString());
+		for(csmMap<String,CubismMotion*>::const_iterator i = this->_map_motion.Begin(); i != this->_map_motion.End(); i++) {
+			String motion_name = i->First;
 			motions.append(motion_name);
 		}
 		p_property.hint_string = String(",").join(motions);
 	}
 
-
     virtual void _cubism_init(InternalCubismUserModel* model) override {
         if(this->_initialized == true) return;
         
 		ICubismModelSetting *model_setting = model->get_model_settings();
-		String model_path = model->get_model_path();
-    	if(model_setting->GetMotionGroupCount() == 0) return;
+		if(model_setting->GetMotionGroupCount() == 0){
+			this->_initialized = true;
+			return;
+		}
 
-		_motion_manager = CSM_NEW CubismMotionManager();
+		String model_path = model->get_model_path();
+
+    	_motion_manager = CSM_NEW CubismMotionManager();
     	_motion_manager->SetEventCallback(model->CubismDefaultMotionEventCallback, model);
+
+		// EyeBlink(Parameters)
+		{
+			Csm::csmInt32 param_count = model_setting->GetEyeBlinkParameterCount();
+			for(Csm::csmInt32 i = 0; i < param_count; ++i)
+			{
+				this->_list_eye_blink.PushBack(model_setting->GetEyeBlinkParameterId(i));
+			}
+		}
+
+		// LipSync(Parameters)
+    	{
+			Csm::csmInt32 param_count = model_setting->GetLipSyncParameterCount();
+			for(Csm::csmInt32 i = 0; i < param_count; ++i)
+			{
+				this->_list_lipsync.PushBack(model_setting->GetLipSyncParameterId(i));
+			}
+		}
 
 		for (csmInt32 ig = 0; ig < model_setting->GetMotionGroupCount(); ig++)
 		{
@@ -102,14 +123,14 @@ public:
 				if (fade_time_sec >= 0.0f) {
 					motion->SetFadeOutTime(fade_time_sec);
 				}
-				//static_cast<CubismMotion*>(motion)->SetEffectIds(this->_list_eye_blink, this->_list_lipsync);
+				static_cast<CubismMotion*>(motion)->SetEffectIds(this->_list_eye_blink, this->_list_lipsync);
 
-				if (this->_map_motion[name] != nullptr) {
-					ACubismMotion::Delete(this->_map_motion[name]);
-					this->_map_motion[name] = nullptr;
+				if (this->_map_motion[gd_filename] != nullptr) {
+					ACubismMotion::Delete(this->_map_motion[gd_filename]);
+					this->_map_motion[gd_filename] = nullptr;
 				}
 
-				this->_map_motion[name] = motion;
+				this->_map_motion[gd_filename] = motion;
 			}
 		}
     
@@ -119,6 +140,7 @@ public:
 	virtual void _cubism_prologue(InternalCubismUserModel* model, const double delta) override {
         if(this->_initialized == false) return;
 		if(this->_active == false) return;
+		if(this->_motion_manager == nullptr) return;
         
 		model->GetModel()->LoadParameters();
 		this->_motion_manager->UpdateMotion(model->GetModel(), delta);
@@ -128,12 +150,15 @@ public:
 	virtual void _cubism_term(InternalCubismUserModel* model) override {
         if(this->_initialized == false) return;
 
+		this->_list_eye_blink.Clear();
+		this->_list_lipsync.Clear();
+
         if(this->_motion_manager != nullptr) {
 			this->_motion_manager->StopAllMotions();
 			CSM_DELETE(this->_motion_manager);
 			this->_motion_manager = nullptr;
 
-			for(csmMap<csmString,CubismMotion*>::const_iterator i = this->_map_motion.Begin(); i != this->_map_motion.End(); i++) {
+			for(csmMap<String,CubismMotion*>::const_iterator i = this->_map_motion.Begin(); i != this->_map_motion.End(); i++) {
 				ACubismMotion::Delete(i->Second);
 			}
 			this->_map_motion.Clear();

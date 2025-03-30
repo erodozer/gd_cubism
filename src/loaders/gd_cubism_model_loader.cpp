@@ -4,20 +4,15 @@
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/sub_viewport.hpp>
 #include <godot_cpp/classes/file_access.hpp>
-#include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/json.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/classes/canvas_group.hpp>
-#include <godot_cpp/classes/animation_player.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 
 #include <loaders/gd_cubism_model_loader.hpp>
 #include <private/internal_cubism_renderer_2d.hpp>
-#include <gd_cubism_expression.hpp>
-#include <gd_cubism_effect_physics.hpp>
-#include <gd_cubism_effect_motion.hpp>
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)
@@ -171,14 +166,14 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
         if (model->GetDrawableMaskCounts()[index] == 0) continue;
         
         SubViewport* viewport = memnew(SubViewport);
-        viewport->set_disable_3d(SUBVIEWPORT_DISABLE_3D_FLAG);
+        viewport->set_disable_3d(true);
         viewport->set_clear_mode(SubViewport::ClearMode::CLEAR_MODE_ALWAYS);
         // set_update_mode must be specified
         viewport->set_update_mode(SubViewport::UpdateMode::UPDATE_WHEN_VISIBLE);
         viewport->set_disable_input(true);
         // Memory leak when set_use_own_world_3d is true
         // https://github.com/godotengine/godot/issues/81476
-        viewport->set_use_own_world_3d(SUBVIEWPORT_USE_OWN_WORLD_3D_FLAG);
+        viewport->set_use_own_world_3d(false);
         // Memory leak when set_transparent_background is true(* every time & window minimize)
         // https://github.com/godotengine/godot/issues/89651
         viewport->set_transparent_background(true);
@@ -250,34 +245,7 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
     }
 }
 
-Array walk_files(String dir, String extension) {
-	Array files;
-
-	// pick files
-	{
-		Array dir_files = DirAccess::get_files_at(dir);
-		for (int i = 0; i < dir_files.size(); i++) {
-			String f = dir_files[i];
-			if (f.ends_with(extension)) {
-				files.append(dir.path_join(f));
-			}
-		}
-	}
-
-	// walk subdirectories
-	{
-		Array sub_dirs = DirAccess::get_directories_at(dir);
-		for (int i = 0; i < sub_dirs.size(); i++) {
-			String f = sub_dirs[i];
-			files.append_array(walk_files(dir.path_join(f), extension));
-		}
-	}
-
-	return files;
-}
-
-
-GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array shaders, const bool include_expressions, const MotionManagerType include_motions, const bool generate_mipmaps) {
+GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array shaders, const bool generate_mipmaps) {
     Ref<FileAccess> f = FileAccess::open(assets, FileAccess::READ);
     ERR_FAIL_COND_V_MSG(f.is_null(), nullptr, "Could not open model path.  Make sure to point to the model3.json");
 
@@ -393,87 +361,6 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array s
 	{
 		build_model(internal_model->GetModel(), model, textures, shaders);
 	}
-
-    // Load Native Animations
-    if (include_motions == MOTION_NATIVE) {
-        GDCubismEffectMotion *motionManager = memnew(GDCubismEffectMotion);
-        model->add_child(motionManager);
-        motionManager->set_name("Motion");
-        motionManager->set_owner(model);
-    }
-
-	// Load Godot Animations
-    if (include_motions == MOTION_GODOT)
-    {
-        AnimationPlayer *anim_player = memnew(AnimationPlayer);
-        Ref<AnimationLibrary> animations;
-        animations.instantiate();
-        anim_player->add_animation_library("", animations);
-        model->add_child(anim_player);
-        anim_player->set_owner(model);
-        anim_player->set_name(MOTION_CONTROLLER_NODE);
-        
-        anim_player->set_root_node("../");
-
-        // do not use deterministic by default, as it will clear out expression and manual overrides
-        anim_player->set_deterministic(false);
-
-        // create reset track for deterministic playback
-        {
-            Ref<Animation> reset_anim;
-            reset_anim.instantiate();
-
-            Dictionary params = model->get_parameters();
-            Array keys = params.keys();
-            for (int i = 0; i < params.size(); i++) {
-                String p_name = keys[i];
-                int track_idx = reset_anim->add_track(Animation::TYPE_BEZIER);
-                Dictionary p = params[p_name];
-                reset_anim->track_set_path(track_idx, NodePath(".:" + p_name));
-                reset_anim->bezier_track_insert_key(track_idx, 0, (float)p["default"]);
-            }
-
-            animations->add_animation("RESET", reset_anim);
-        }
-
-        ResourceLoader *res_loader = ResourceLoader::get_singleton();
-        Array motion_files = walk_files(assets.get_base_dir(), MOTION_FILE_EXTENSION);
-        for (int i = 0; i < motion_files.size(); i++) {
-            String motion = motion_files[i];
-            Ref<Animation> anim = res_loader->load(motion, "Animation");
-            if (anim.is_valid()) {
-                animations->add_animation(motion.get_file(), anim);
-            }
-        }
-
-        anim_player->set_active(true);
-        anim_player->stop();
-    }
-
-    // Load Expressions
-    if (include_expressions)
-    {
-        
-        ResourceLoader *res_loader = ResourceLoader::get_singleton();
-        Array files = walk_files(assets.get_base_dir(), EXPRESSION_FILE_EXTENSION);
-        Dictionary expressions;
-        for (int i = 0; i < files.size(); i++) {
-            String f = files[i];
-            Ref<GDCubismExpression> e = res_loader->load(f, "GDCubismExpression");
-            if (e.is_valid()) {
-                expressions[StringName(e->get_name())] = e;
-            }
-        }
-        model->set_expressions(expressions);
-    }
-
-    // Preload physics effects
-    {
-        GDCubismEffectPhysics *physics = memnew(GDCubismEffectPhysics);
-        model->add_child(physics);
-        physics->set_name("Physics");
-        physics->set_owner(model);
-    }
     
     CSM_DELETE(internal_model);
 

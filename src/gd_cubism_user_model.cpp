@@ -25,7 +25,6 @@
 #include <gd_cubism_effect_eye_blink.hpp>
 #include <gd_cubism_motion_entry.hpp>
 #include <gd_cubism_user_model.hpp>
-#include <gd_cubism_expression.hpp>
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)

@@ -10,7 +10,6 @@
 #include <godot_cpp/classes/node.hpp>
 #include <private/internal_cubism_user_model.hpp>
 #include <gd_cubism_effect.hpp>
-#include <gd_cubism_expression.hpp>
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)
@@ -23,29 +22,64 @@ class GDCubismEffectExpression : public GDCubismEffect {
 
 protected:
     static void _bind_methods() {
-		
+		ClassDB::bind_method(D_METHOD("set_expression", "motion"), &GDCubismEffectExpression::set_expression);
+        ClassDB::bind_method(D_METHOD("get_expression"), &GDCubismEffectExpression::get_expression);
+        ADD_PROPERTY(PropertyInfo(Variant::STRING, "expression"), "set_expression", "get_expression");
 	}
 
 private:
 	CubismExpressionMotionManager* _expressionManager;
+	csmMap<String, CubismExpressionMotion*> _expressions;
+	String _active_expression;
 	
 public:
-	void set_expression(Csm::CubismExpressionMotion* motion) {
-		if(motion != nullptr) {
-			this->_expressionManager->StartMotionPriority(
-				motion,
-				false,
-				GDCubismUserModel::Priority::PRIORITY_FORCE
-			);
-		} else {
-			this->_expressionManager->StopAllMotions();
+	String get_expression() const {
+		return this->_active_expression;
+	}
+	void set_expression(String motion) {
+		if (this->_expressionManager != nullptr) {
+			if(this->_expressions[motion] != nullptr) {
+				this->_expressionManager->StartMotionPriority(
+					this->_expressions[motion],
+					false,
+					GDCubismUserModel::Priority::PRIORITY_FORCE
+				);
+			} else {
+				this->_expressionManager->StopAllMotions();
+			}
 		}
+		this->_active_expression = motion;
+	}
+
+	void _validate_property(PropertyInfo &p_property) const {
+		if (p_property.name != StringName("active_motion")) return;
+
+		Array motions;
+		for(csmMap<String,CubismExpressionMotion*>::const_iterator i = this->_expressions.Begin(); i != this->_expressions.End(); i++) {
+			String motion_name = i->First;
+			motions.append(motion_name);
+		}
+		p_property.hint_string = String(",").join(motions);
 	}
 
     virtual void _cubism_init(InternalCubismUserModel* model) override {
         if(this->_initialized == true) return;
 
 		_expressionManager = CSM_NEW CubismExpressionMotionManager();
+		ICubismModelSetting *model_setting = model->get_model_settings();
+		String model_path = model->get_model_path();
+
+		for (int32_t i = 0; i < model_setting->GetExpressionCount(); i++) {
+			String gd_filename; gd_filename.parse_utf8(model_setting->GetExpressionFileName(i));
+			String motion_pathname = model_path.get_base_dir().path_join(gd_filename);
+
+			PackedByteArray buffer = FileAccess::get_file_as_bytes(motion_pathname);
+
+			CubismExpressionMotion *expression = CubismExpressionMotion::Create(buffer.ptr(), buffer.size());
+
+			this->_expressions[gd_filename] = expression;
+		}
+		this->_active_expression = "";
 
         this->_initialized = true;
     }
@@ -64,6 +98,7 @@ public:
 			CSM_DELETE(this->_expressionManager);
 			this->_expressionManager = nullptr;
         }
+		this->_active_expression = "";
 
         this->_initialized = false;
     }

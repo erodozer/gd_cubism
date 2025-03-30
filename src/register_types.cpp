@@ -7,7 +7,6 @@
 
 #include <CubismFramework.hpp>
 
-#include <loaders/gd_cubism_expression_loader.hpp>
 #include <loaders/gd_cubism_motion_loader.hpp>
 #include <loaders/gd_cubism_model_loader.hpp>
 #include <importers/gd_cubism_model_importer.hpp>
@@ -21,9 +20,9 @@
 #include <gd_cubism_effect_expression.hpp>
 #include <gd_cubism_effect_physics.hpp>
 #include <gd_cubism_effect_motion.hpp>
+#include <gd_cubism_effect_pose.hpp>
 #include <gd_cubism_motion_entry.hpp>
 #include <gd_cubism_user_model.hpp>
-#include <gd_cubism_expression.hpp>
 #include <register_types.hpp>
 #include <plugin.hpp>
 
@@ -34,7 +33,6 @@ static InternalCubismAllocator allocator;
 static Csm::CubismFramework::Option option;
     
 static Ref<GDCubismMotionLoader> motionLoader;
-static Ref<GDCubismExpressionLoader> expressionLoader;
 static Ref<GDCubismModelLoader> modelLoader;
 
 // -------------------------------------------------------------------- enum(s)
@@ -69,8 +67,6 @@ void initialize_gd_cubism_module(ModuleInitializationLevel p_level) {
     Csm::CubismFramework::StartUp(&allocator, &option);
     Csm::CubismFramework::Initialize();
 
-    GDREGISTER_CLASS(GDCubismExpression);
-
     GDREGISTER_VIRTUAL_CLASS(GDCubismEffect);
     GDREGISTER_CLASS(GDCubismEffectBreath);
     GDREGISTER_CLASS(GDCubismEffectCustom);
@@ -80,23 +76,20 @@ void initialize_gd_cubism_module(ModuleInitializationLevel p_level) {
     GDREGISTER_CLASS(GDCubismEffectExpression);
     GDREGISTER_CLASS(GDCubismEffectPhysics);
     GDREGISTER_CLASS(GDCubismEffectMotion);
+    GDREGISTER_CLASS(GDCubismEffectPose);
 
     ClassDB::register_class<GDCubismMotionQueueEntryHandle>();
     ClassDB::register_class<GDCubismMotionEntry>();
     ClassDB::register_class<GDCubismUserModel>();
 
     ClassDB::register_class<GDCubismMotionLoader>();
-    ClassDB::register_class<GDCubismExpressionLoader>();
     ClassDB::register_class<GDCubismModelLoader>();    
         
-    expressionLoader.instantiate();
     motionLoader.instantiate();
     modelLoader.instantiate();
     
-    ResourceLoader::get_singleton()->add_resource_format_loader(expressionLoader, true);
     ResourceLoader::get_singleton()->add_resource_format_loader(motionLoader, true);
     ResourceLoader::get_singleton()->add_resource_format_loader(modelLoader, true);
-
 }
 
 void uninitialize_gd_cubism_module(ModuleInitializationLevel p_level) {
@@ -108,11 +101,9 @@ void uninitialize_gd_cubism_module(ModuleInitializationLevel p_level) {
 		return;
 	}
     
-    ResourceLoader::get_singleton()->remove_resource_format_loader(expressionLoader);
     ResourceLoader::get_singleton()->remove_resource_format_loader(motionLoader);
     ResourceLoader::get_singleton()->remove_resource_format_loader(modelLoader);
 
-    expressionLoader.unref();
     motionLoader.unref();
     modelLoader.unref();
     

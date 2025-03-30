@@ -1,5 +1,5 @@
-#ifndef GD_CUBISM_EFFECT_PHYSICS
-#define GD_CUBISM_EFFECT_PHYSICS
+#ifndef GD_CUBISM_EFFECT_POSE
+#define GD_CUBISM_EFFECT_POSE
 
 // ----------------------------------------------------------------- include(s)
 #include <CubismFramework.hpp>
@@ -17,8 +17,8 @@ using namespace Live2D::Cubism::Framework;
 using namespace godot;
 // ----------------------------------------------------------- class:forward(s)
 // ------------------------------------------------------------------- class(s)
-class GDCubismEffectPhysics : public GDCubismEffect {
-	GDCLASS(GDCubismEffectPhysics, GDCubismEffect);
+class GDCubismEffectPose : public GDCubismEffect {
+	GDCLASS(GDCubismEffectPose, GDCubismEffect);
 
 protected:
     static void _bind_methods() {
@@ -26,20 +26,20 @@ protected:
 	}
 
 private:
-	CubismPhysics* _physics;
+	CubismPose* _pose;
 	
 public:
     virtual void _cubism_init(InternalCubismUserModel* model) override {
         if(this->_initialized == true) return;
         
-		String path = model->get_model_settings()->GetPhysicsFileName();
+		String path = model->get_model_settings()->GetPoseFileName();
 		String _model_dir = model->get_model_path().get_base_dir();
         if (!path.is_empty()) {
             PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(path));
-			if (buffer.size() > 0) {
-				_physics = CubismPhysics::Create(buffer.ptr(), buffer.size());
-			}
-		}
+            if(buffer.size() > 0) {
+				_pose = CubismPose::Create(buffer.ptr(), buffer.size());
+            }
+        }
 
         this->_initialized = true;
     }
@@ -47,21 +47,21 @@ public:
 	virtual void _cubism_process(InternalCubismUserModel* model, const double delta) override {
         if(this->_initialized == false) return;
 		if(this->_active == false) return;
-		if(this->_physics == nullptr) return;
-        
-		this->_physics->Evaluate(model->GetModel(), (float_t)delta);
+        if(this->_pose == nullptr) return;
+
+		this->_pose->UpdateParameters(model->GetModel(), (float_t)delta);
     }
 
 	virtual void _cubism_term(InternalCubismUserModel* model) override {
         if(this->_initialized == false) return;
 
-        if(this->_physics != nullptr) {
-			CubismPhysics::Delete(this->_physics);
-			this->_physics = nullptr;
+        if(this->_pose != nullptr) {
+			CubismPose::Delete(this->_pose);
+			this->_pose = nullptr;
         }
 
         this->_initialized = false;
     }
 };
 
-#endif // GD_CUBISM_EFFECT_PHYSICS
+#endif // GD_CUBISM_EFFECT_POSE

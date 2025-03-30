@@ -61,16 +61,6 @@ bool InternalCubismUserModel::model_bind() {
 
         this->_model->SaveParameters();
     }
-    // Pose
-    {
-        String path = model_settings->GetPoseFileName();
-        if (!path.is_empty()) {
-            PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(path));
-            if(buffer.size() > 0) {
-                this->LoadPose(buffer.ptr(), buffer.size());
-            }
-        }
-    }
     //UserData
     {
         String path = model_settings->GetUserDataFile();
