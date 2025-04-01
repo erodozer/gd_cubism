@@ -3,12 +3,11 @@
 
 // ----------------------------------------------------------------- include(s)
 #include <CubismFramework.hpp>
+#include <Physics/CubismPhysics.hpp>
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/global_constants.hpp>
-#include <godot_cpp/classes/node.hpp>
-#include <private/internal_cubism_user_model.hpp>
 #include <gd_cubism_effect.hpp>
 
 // ------------------------------------------------------------------ define(s)
@@ -29,11 +28,11 @@ private:
 	CubismPhysics* _physics;
 	
 public:
-    virtual void _cubism_init(InternalCubismUserModel* model) override {
+    virtual void _cubism_init(GDCubismUserModel* model) override {
         if(this->_initialized == true) return;
         
 		String path = model->get_model_settings()->GetPhysicsFileName();
-		String _model_dir = model->get_model_path().get_base_dir();
+		String _model_dir = model->get_scene_file_path().get_base_dir();
         if (!path.is_empty()) {
             PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(path));
 			if (buffer.size() > 0) {
@@ -44,15 +43,15 @@ public:
         this->_initialized = true;
     }
 
-	virtual void _cubism_process(InternalCubismUserModel* model, const double delta) override {
+	virtual void _cubism_process(GDCubismUserModel* model, const double delta) override {
         if(this->_initialized == false) return;
 		if(this->_active == false) return;
 		if(this->_physics == nullptr) return;
         
-		this->_physics->Evaluate(model->GetModel(), (float_t)delta);
+		this->_physics->Evaluate(model->get_internal_model(), (float_t)delta);
     }
 
-	virtual void _cubism_term(InternalCubismUserModel* model) override {
+	virtual void _cubism_term(GDCubismUserModel* model) override {
         if(this->_initialized == false) return;
 
         if(this->_physics != nullptr) {

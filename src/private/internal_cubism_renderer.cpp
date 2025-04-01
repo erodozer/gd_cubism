@@ -8,8 +8,6 @@
 
 #include <private/internal_cubism_renderer_2d.hpp>
 
-#include <private/internal_cubism_user_model.hpp>
-
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)

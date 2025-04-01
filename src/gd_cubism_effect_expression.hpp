@@ -8,7 +8,6 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/classes/global_constants.hpp>
 #include <godot_cpp/classes/node.hpp>
-#include <private/internal_cubism_user_model.hpp>
 #include <gd_cubism_effect.hpp>
 
 // ------------------------------------------------------------------ define(s)
@@ -62,12 +61,12 @@ public:
 		p_property.hint_string = String(",").join(motions);
 	}
 
-    virtual void _cubism_init(InternalCubismUserModel* model) override {
+    virtual void _cubism_init(GDCubismUserModel* model) override {
         if(this->_initialized == true) return;
 
 		_expressionManager = CSM_NEW CubismExpressionMotionManager();
 		ICubismModelSetting *model_setting = model->get_model_settings();
-		String model_path = model->get_model_path();
+		String model_path = model->get_scene_file_path().get_base_dir();
 
 		for (int32_t i = 0; i < model_setting->GetExpressionCount(); i++) {
 			String gd_filename; gd_filename.parse_utf8(model_setting->GetExpressionFileName(i));
@@ -84,23 +83,30 @@ public:
         this->_initialized = true;
     }
 
-	virtual void _cubism_process(InternalCubismUserModel* model, const double delta) override {
+	virtual void _cubism_process(GDCubismUserModel* model, const double delta) override {
         if(this->_initialized == false) return;
         if(this->_active == false) return;
     
-		this->_expressionManager->UpdateMotion(model->GetModel(), delta);
+		this->_expressionManager->UpdateMotion(model->get_internal_model(), delta);
     }
 
-	virtual void _cubism_term(InternalCubismUserModel* model) override {
+	virtual void _cubism_term(GDCubismUserModel* model) override {
         if(this->_initialized == false) return;
 
-        if(this->_expressionManager != nullptr) {
+		if(this->_expressionManager != nullptr) {
+			this->_expressionManager->StopAllMotions();
+		
 			CSM_DELETE(this->_expressionManager);
 			this->_expressionManager = nullptr;
-        }
-		this->_active_expression = "";
 
-        this->_initialized = false;
+			for(csmMap<String,CubismExpressionMotion*>::const_iterator i = this->_expressions.Begin(); i != this->_expressions.End(); i++) {
+				CubismExpressionMotion::Delete(i->Second);
+			}
+
+        	this->_expressions.Clear();
+		}
+		this->_active_expression = "";
+		this->_initialized = false;
     }
 };
 

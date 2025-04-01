@@ -4,11 +4,13 @@
 // ----------------------------------------------------------------- include(s)
 #include <CubismFramework.hpp>
 
+#include <Motion/ACubismMotion.hpp>
+#include <Motion/CubismMotion.hpp>
+#include <Motion/CubismMotionManager.hpp>
+
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/global_constants.hpp>
-#include <godot_cpp/classes/node.hpp>
-#include <private/internal_cubism_user_model.hpp>
 #include <gd_cubism_effect.hpp>
 
 // ------------------------------------------------------------------ define(s)
@@ -35,6 +37,27 @@ private:
 
 	String active_motion;
     
+	static void CubismDefaultMotionEventCallback(const CubismMotionQueueManager* caller, const csmString& eventValue, void* customData)
+	{
+		GDCubismUserModel* model = reinterpret_cast<GDCubismUserModel*>(customData);
+		if (model != NULL)
+		{
+			//model->emit_signal();
+		}
+	}
+
+	ACubismMotion *load_motion(String motion_filepath) {
+		PackedByteArray buffer = FileAccess::get_file_as_bytes(motion_filepath);
+		ACubismMotion* motion = CubismMotion::Create(buffer.ptr(), buffer.size(), NULL, NULL);
+
+		if (!motion)
+		{
+			CubismLogError("Failed to create motion from buffer in LoadMotion().");
+			return NULL;
+		}
+
+		return motion;
+	}
 public:
 	void set_active_motion(String motion_name) {
 		if (this->_motion_manager == nullptr) return;
@@ -60,7 +83,7 @@ public:
 		p_property.hint_string = String(",").join(motions);
 	}
 
-    virtual void _cubism_init(InternalCubismUserModel* model) override {
+    virtual void _cubism_init(GDCubismUserModel* model) override {
         if(this->_initialized == true) return;
         
 		ICubismModelSetting *model_setting = model->get_model_settings();
@@ -69,10 +92,10 @@ public:
 			return;
 		}
 
-		String model_path = model->get_model_path();
+		String model_path = model->get_scene_file_path();
 
     	_motion_manager = CSM_NEW CubismMotionManager();
-    	_motion_manager->SetEventCallback(model->CubismDefaultMotionEventCallback, model);
+    	_motion_manager->SetEventCallback(CubismDefaultMotionEventCallback, model);
 
 		// EyeBlink(Parameters)
 		{
@@ -102,17 +125,12 @@ public:
 
 			for (csmInt32 im = 0; im < motion_count; im++)
 			{
-				csmString name = Utils::CubismString::GetFormatedString("%s_%d", group, im);
+				String name = String(group) + String("_") + String::num_int64(im);
 
 				String gd_filename; gd_filename.parse_utf8(model_setting->GetMotionFileName(group, im));
 				String motion_pathname = model_path.get_base_dir().path_join(gd_filename);
 
-				PackedByteArray buffer = FileAccess::get_file_as_bytes(motion_pathname);
-				CubismMotion* motion = static_cast<CubismMotion*>(model->LoadMotion(
-					buffer.ptr(),
-					buffer.size(),
-					name.GetRawString()
-				));
+				CubismMotion* motion = static_cast<CubismMotion*>(this->load_motion(motion_pathname));
 
 				csmFloat32 fade_time_sec = model_setting->GetMotionFadeInTimeValue(group, im);
 				if (fade_time_sec >= 0.0f) {
@@ -123,7 +141,8 @@ public:
 				if (fade_time_sec >= 0.0f) {
 					motion->SetFadeOutTime(fade_time_sec);
 				}
-				static_cast<CubismMotion*>(motion)->SetEffectIds(this->_list_eye_blink, this->_list_lipsync);
+				
+				motion->SetEffectIds(this->_list_eye_blink, this->_list_lipsync);
 
 				if (this->_map_motion[gd_filename] != nullptr) {
 					ACubismMotion::Delete(this->_map_motion[gd_filename]);
@@ -137,17 +156,17 @@ public:
         this->_initialized = true;
     }
 
-	virtual void _cubism_prologue(InternalCubismUserModel* model, const double delta) override {
+	virtual void _cubism_prologue(GDCubismUserModel* model, const double delta) override {
         if(this->_initialized == false) return;
 		if(this->_active == false) return;
 		if(this->_motion_manager == nullptr) return;
         
-		model->GetModel()->LoadParameters();
-		this->_motion_manager->UpdateMotion(model->GetModel(), delta);
-		model->GetModel()->SaveParameters();
+		model->get_internal_model()->LoadParameters();
+		this->_motion_manager->UpdateMotion(model->get_internal_model(), delta);
+		model->get_internal_model()->SaveParameters();
     }
 
-	virtual void _cubism_term(InternalCubismUserModel* model) override {
+	virtual void _cubism_term(GDCubismUserModel* model) override {
         if(this->_initialized == false) return;
 
 		this->_list_eye_blink.Clear();

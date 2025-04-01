@@ -12,19 +12,18 @@
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/animation_library.hpp>
-#include <godot_cpp/classes/animation_player.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/variant/typed_dictionary.hpp>
 
 #include <CubismFramework.hpp>
+#include <Model/CubismMoc.hpp>
+#include <Model/CubismModel.hpp>
 #include <Math/CubismVector2.hpp>
-#include <Motion/ACubismMotion.hpp>
-#include <Motion/CubismMotionQueueEntry.hpp>
-
-#include <gd_cubism_motion_entry.hpp>
+#include <ICubismModelSetting.hpp>
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)
+using namespace Live2D::Cubism::Framework;
 using namespace godot;
 
 // -------------------------------------------------------------------- enum(s)
@@ -34,7 +33,6 @@ const static char* MASKS_NODE = "Masks";
 
 // ------------------------------------------------------------------ static(s)
 // ----------------------------------------------------------- class:forward(s)
-class InternalCubismUserModel;
 class GDCubismEffect;
 
 // ------------------------------------------------------------------- class(s)
@@ -63,18 +61,24 @@ public:
         PRIORITY_FORCE = 3
     };
 
-    AnimationLibrary *ani_lib;
     bool physics_evaluate;
     bool pose_update;
     Array ary_meshes;
     Array ary_masks;
     Dictionary dict_mesh;
+    Dictionary user_data;
 
     int32_t mask_viewport_size = 0;
 
     Array _list_cubism_effect;
     bool cubism_effect_dirty;
 
+    Vector2i size;
+    Vector2i origin;
+    float pp_unit;
+
+    void load_model();
+    void cleanup_csm();
 private:
     enum EFFECT_CALL {
         EFFECT_CALL_PROLOGUE,
@@ -82,7 +86,9 @@ private:
         EFFECT_CALL_EPILOGUE
     };
 
-    InternalCubismUserModel *internal_model;
+    CubismMoc *_moc;
+    CubismModel *internal_model;
+    ICubismModelSetting *model_settings;
 
     Dictionary parameter_values;
     Dictionary part_opacity_values;
@@ -101,7 +107,16 @@ protected:
         // csm
         ClassDB::bind_method(D_METHOD("csm_get_version"), &GDCubismUserModel::csm_get_version);
 
-        ClassDB::bind_method(D_METHOD("get_canvas_info"), &GDCubismUserModel::get_canvas_info);
+        ClassDB::bind_method(D_METHOD("get_size"), &GDCubismUserModel::get_size);
+        ClassDB::bind_method(D_METHOD("set_size"), &GDCubismUserModel::set_size);
+        ClassDB::bind_method(D_METHOD("get_origin"), &GDCubismUserModel::get_origin);
+        ClassDB::bind_method(D_METHOD("set_origin"), &GDCubismUserModel::set_origin);
+        ClassDB::bind_method(D_METHOD("get_pp_unit"), &GDCubismUserModel::get_pp_unit);
+        ClassDB::bind_method(D_METHOD("set_pp_unit"), &GDCubismUserModel::set_pp_unit);
+        ADD_PROPERTY(PropertyInfo(Variant::VECTOR2I, "size"), "set_size", "get_size");
+        ADD_PROPERTY(PropertyInfo(Variant::VECTOR2I, "origin"), "set_origin", "get_origin");
+        ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "pp_unit"), "set_pp_unit", "get_pp_unit");
+        ClassDB::bind_method(D_METHOD("get_user_data"), &GDCubismUserModel::get_user_data);
 
         // Parameter
         ClassDB::bind_method(D_METHOD("get_parameters"), &GDCubismUserModel::get_parameters);
@@ -141,15 +156,39 @@ protected:
 public:
     Dictionary csm_get_version();
 
-    Dictionary get_canvas_info() const;
+    void set_size(Vector2i v) {
+        this->size = v;
+    }
+
+    Vector2i get_size() const {
+        return this->size;
+    }
+
+    void set_origin(Vector2i v) {
+        this->origin = v;
+    }
+
+    Vector2i get_origin() const {
+        return this->origin;
+    }
+
+    void set_pp_unit(float v) {
+        this->pp_unit = v;
+    }
+
+    float get_pp_unit() const {
+        return this->pp_unit;
+    }
+
+    Dictionary get_user_data() const {
+        return this->user_data;
+    }
 
     bool is_initialized() const;
 
     Dictionary get_mesh_dict() const;
 
     Array get_meshes() const;
-
-    void _update(const double delta);
 
     void advance(const double delta);
 
@@ -172,6 +211,10 @@ public:
         return this->parameters; 
     }
 
+    ICubismModelSetting * get_model_settings() const {
+        return this->model_settings;
+    }
+
     void set_parts(const Dictionary v) {
         this->parts = v; 
         this->ary_parts = v.values();
@@ -187,7 +230,7 @@ public:
     void _on_append_child_act(GDCubismEffect* node);
     void _on_remove_child_act(GDCubismEffect* node);
 
-    InternalCubismUserModel* get_internal_model() {
+    CubismModel* get_internal_model() {
         return this->internal_model;
     }
 };

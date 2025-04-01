@@ -11,7 +11,6 @@
 #include <CubismDefaultParameterId.hpp>
 #include <Id/CubismIdManager.hpp>
 
-#include <private/internal_cubism_user_model.hpp>
 #include <gd_cubism_effect.hpp>
 
 #include <godot_cpp/classes/array_mesh.hpp>
@@ -157,7 +156,7 @@ public:
         return this->_hit_areas;
     }
 
-    virtual void _cubism_init(InternalCubismUserModel* model) override {
+    virtual void _cubism_init(GDCubismUserModel* model) override {
         if(this->_initialized == true) return;
 
         this->_dict_monitoring.clear();
@@ -179,7 +178,7 @@ public:
         this->_initialized = true;
     }
 
-    virtual void _cubism_term(InternalCubismUserModel* model) override {
+    virtual void _cubism_term(GDCubismUserModel* model) override {
         if(this->_initialized == false) return;
 
         this->_dict_monitoring.clear();
@@ -187,12 +186,12 @@ public:
         this->_initialized = false;
     }
 
-    virtual void _cubism_process(InternalCubismUserModel* model, const double delta) override {
+    virtual void _cubism_process(GDCubismUserModel* model, const double delta) override {
         if(this->_initialized == false) return;
         if(this->_active == false) return;
 
         Array ary = this->get_hit_areas();
-        Dictionary dict_mesh = model->_owner_viewport->get_mesh_dict();
+        Dictionary dict_mesh = model->get_mesh_dict();
 
         for(int64_t i = 0; i < ary.size(); i++) {
             const String id = static_cast<Dictionary>(ary[i]).get("id", String());
@@ -208,15 +207,15 @@ public:
             if(this->_target_update == true && check_rect.has_point(this->_target) == true) {
                 if(this->_monitoring == true) {
                     if(static_cast<bool>(this->_dict_monitoring.get(id, false)) == false) {
-                        this->emit_signal(SIGNAL_EFFECT_HIT_AREA_ENTERED, model->_owner_viewport, id);
+                        this->emit_signal(SIGNAL_EFFECT_HIT_AREA_ENTERED, model, id);
                     }
                 } else {
-                    this->emit_signal(SIGNAL_EFFECT_HIT_AREA_ENTERED, model->_owner_viewport, id);
+                    this->emit_signal(SIGNAL_EFFECT_HIT_AREA_ENTERED, model, id);
                 }
                 this->_dict_monitoring[id] = true;
             } else {
                 if(static_cast<bool>(this->_dict_monitoring.get(id, false)) == true) {
-                    this->emit_signal(SIGNAL_EFFECT_HIT_AREA_EXITED, model->_owner_viewport, id);
+                    this->emit_signal(SIGNAL_EFFECT_HIT_AREA_EXITED, model, id);
                 }
                 this->_dict_monitoring[id] = false;
             }

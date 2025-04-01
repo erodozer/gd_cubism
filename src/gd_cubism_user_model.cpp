@@ -6,7 +6,6 @@
 #include <godot_cpp/classes/json.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/ref.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/sub_viewport.hpp>
@@ -15,19 +14,17 @@
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/mesh_instance2d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 
-#include <CubismFramework.hpp>
-#include <Model/CubismModel.hpp>
-#include <Motion/CubismMotion.hpp>
+#include <CubismModelSettingJson.hpp>
 
-#include <private/internal_cubism_user_model.hpp>
 #include <private/internal_cubism_renderer_2d.hpp>
 #include <gd_cubism_effect_eye_blink.hpp>
-#include <gd_cubism_motion_entry.hpp>
 #include <gd_cubism_user_model.hpp>
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)
+using namespace Live2D::Cubism::Framework;
 using namespace godot;
 
 
@@ -38,27 +35,33 @@ using namespace godot;
 // ------------------------------------------------------------------- class(s)
 GDCubismUserModel::GDCubismUserModel()
     : internal_model(nullptr)
-    , ani_lib(nullptr)
+    , model_settings(nullptr)
     , mask_viewport_size(0)
     , physics_evaluate(true)
     , pose_update(true)
-    , cubism_effect_dirty(false) {
+    , cubism_effect_dirty(false)
+    , size(Vector2(1,1))
+    , origin(Vector2(0,0))
+    , _moc(nullptr) {
 }
 
 
-GDCubismUserModel::~GDCubismUserModel() {}
+GDCubismUserModel::~GDCubismUserModel() {
+    if (this->is_initialized()) {
+        this->cleanup_csm();
+    }
+}
 
 
 void GDCubismUserModel::_notification(int p_what) {
-    if(this->internal_model == nullptr) {
+    if(!this->is_initialized()) {
         return;
     }
 
     // make sure to clear the SDK model when this node is deleted
     if (p_what == NOTIFICATION_PREDELETE) {
         this->effect_term();
-        CSM_DELETE(this->internal_model);
-        this->internal_model = nullptr;
+        this->cleanup_csm();
     }
 
     // apply mutated parameter values to the model
@@ -83,28 +86,8 @@ Dictionary GDCubismUserModel::csm_get_version() {
     return dict_version;
 }
 
-
-Dictionary GDCubismUserModel::get_canvas_info() const {
-    ERR_FAIL_COND_V(this->is_initialized() == false, Dictionary());
-
-    Dictionary result;
-    Live2D::Cubism::Core::csmVector2 vct_pixel_size;
-    Live2D::Cubism::Core::csmVector2 vct_pixel_origin;
-    Csm::csmFloat32 pixel_per_unit;
-
-    Live2D::Cubism::Core::csmReadCanvasInfo(this->internal_model->GetModel()->GetModel(), &vct_pixel_size, &vct_pixel_origin, &pixel_per_unit);
-
-    result["size_in_pixels"] = Vector2(vct_pixel_size.X, vct_pixel_size.Y);
-    result["origin_in_pixels"] = Vector2(vct_pixel_origin.X, vct_pixel_origin.Y);
-    result["pixels_per_unit"] = pixel_per_unit;
-
-    return result;
-}
-
-
 bool GDCubismUserModel::is_initialized() const {
-    if(this->internal_model == nullptr) return false;
-    return this->internal_model->IsInitialized();
+    return this->internal_model != nullptr;
 }
 
 Array GDCubismUserModel::get_meshes() const {
@@ -115,10 +98,12 @@ Dictionary GDCubismUserModel::get_mesh_dict() const {
     return this->dict_mesh; 
 }
 
-void GDCubismUserModel::_update(const double delta) {
+void GDCubismUserModel::advance(const double delta) {
+    if (!this->is_initialized()) return;
+
     this->effect_batch(delta, EFFECT_CALL_PROLOGUE);
 
-    this->internal_model->GetModel()->GetModelOpacity();
+    this->internal_model->GetModelOpacity();
 
     // update parameters
     {
@@ -128,7 +113,7 @@ void GDCubismUserModel::_update(const double delta) {
             int p_id = param["id"];
             float value = this->parameter_values[p_name];
 
-            this->internal_model->GetModel()->SetParameterValue(p_id, value);
+            this->internal_model->SetParameterValue(p_id, value);
         }
     }
 
@@ -140,7 +125,7 @@ void GDCubismUserModel::_update(const double delta) {
             int p_id = part["id"];
             float value = this->part_opacity_values[p_name];
 
-            this->internal_model->GetModel()->SetPartOpacity(p_id, value);
+            this->internal_model->SetPartOpacity(p_id, value);
         }
     }
 
@@ -152,22 +137,17 @@ void GDCubismUserModel::_update(const double delta) {
 
     this->effect_batch(delta, EFFECT_CALL_PROCESS);
 
-    this->internal_model->GetModel()->Update();
+    this->internal_model->Update();
 
     this->effect_batch(delta, EFFECT_CALL_EPILOGUE);
 
     InternalCubismRenderer2D::update(
-        this->internal_model->GetModel(),
+        this->internal_model,
         this->ary_meshes,
         this->ary_masks,
+        this->pp_unit,
         this->mask_viewport_size
     );
-}
-
-void GDCubismUserModel::advance(const double delta) {
-    ERR_FAIL_COND(this->is_initialized() == false);
-    
-    this->_update(delta);
 }
 
 
@@ -184,7 +164,7 @@ void GDCubismUserModel::cubism_effect_dirty_reset() {
 void GDCubismUserModel::effect_init() {
     for (int i = 0; i < this->_list_cubism_effect.size(); i++) {
         GDCubismEffect* effect = Object::cast_to<GDCubismEffect>(this->_list_cubism_effect[i]);
-        effect->_cubism_init(this->internal_model);
+        effect->_cubism_init(this);
     }
 }
 
@@ -192,7 +172,7 @@ void GDCubismUserModel::effect_init() {
 void GDCubismUserModel::effect_term() {
     for (int i = 0; i < this->_list_cubism_effect.size(); i++) {
         GDCubismEffect* effect = Object::cast_to<GDCubismEffect>(this->_list_cubism_effect[i]);
-        effect->_cubism_term(this->internal_model);
+        effect->_cubism_term(this);
     }
 }
 
@@ -201,9 +181,9 @@ void GDCubismUserModel::effect_batch(const double delta, const EFFECT_CALL efx_c
     for (int i = 0; i < this->_list_cubism_effect.size(); i++) {
         GDCubismEffect* effect = Object::cast_to<GDCubismEffect>(this->_list_cubism_effect[i]);
         switch(efx_call) {
-            case EFFECT_CALL_PROLOGUE:  effect->_cubism_prologue(this->internal_model, delta);    break;
-            case EFFECT_CALL_PROCESS:   effect->_cubism_process(this->internal_model, delta);     break;
-            case EFFECT_CALL_EPILOGUE:  effect->_cubism_epilogue(this->internal_model, delta);    break;
+            case EFFECT_CALL_PROLOGUE:  effect->_cubism_prologue(this, delta);    break;
+            case EFFECT_CALL_PROCESS:   effect->_cubism_process(this, delta);     break;
+            case EFFECT_CALL_EPILOGUE:  effect->_cubism_epilogue(this, delta);    break;
         }
     }
 }
@@ -271,6 +251,9 @@ void GDCubismUserModel::_validate_property(PropertyInfo &p_property) const {
     if (name == "parts") {
         p_property.usage = PROPERTY_USAGE_NO_EDITOR;
     }
+    if (name == "size" || name == "origin" || name == "pp_unit") {
+        p_property.usage = PROPERTY_USAGE_NO_EDITOR;
+    }
 }
 
 void GDCubismUserModel::_get_property_list(List<godot::PropertyInfo> *p_list) {
@@ -329,9 +312,10 @@ void GDCubismUserModel::_ready() {
     this->cubism_effect_dirty = true;
 
     // reattach GDCubismModel
-    this->internal_model = CSM_NEW InternalCubismUserModel(this);
-    this->internal_model->model_bind();
-    
+    if (!this->is_initialized()) {
+        this->load_model();
+    }
+
     Node *meshes = this->get_node_or_null(NodePath(MESHES_NODE));
     if (meshes != nullptr) {
         for (int i = 0; i < meshes->get_child_count(); i++) {
@@ -365,9 +349,7 @@ void GDCubismUserModel::_ready() {
 
 
 void GDCubismUserModel::_process(double delta) {
-    if(this->is_initialized() == false) return;
-
-    this->_update(delta);
+    this->advance(delta);
 }
 
 
@@ -382,5 +364,61 @@ void GDCubismUserModel::_on_remove_child_act(GDCubismEffect* node) {
     this->cubism_effect_dirty = true;
 }
 
+void GDCubismUserModel::load_model() {
+    {
+        PackedByteArray buffer = FileAccess::get_file_as_bytes(this->get_scene_file_path());
+        if(buffer.size() == 0) {
+            UtilityFunctions::print("Unable to access model file");
+            return;
+        }
+    
+        this->model_settings = CSM_NEW CubismModelSettingJson(buffer.ptr(), buffer.size());
+
+        if (this->model_settings == NULL) {
+            UtilityFunctions::print("Could not read model settings");
+            return;
+        }
+    }
+
+    String _model_dir = this->get_scene_file_path().get_base_dir();
+    PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(this->model_settings->GetModelFileName()));
+    if(buffer.size() == 0) {
+        UtilityFunctions::print("Unable to access model file");
+        this->cleanup_csm();
+        return;
+    }
+    
+    this->_moc = CubismMoc::Create(buffer.ptr(), buffer.size(), false);
+
+    if (this->_moc == NULL)
+    {
+        UtilityFunctions::print("Failed to load Cubism Moc.");
+        this->cleanup_csm();
+        return;
+    }
+
+    this->internal_model = _moc->CreateModel();
+
+    if (this->internal_model == NULL)
+    {
+        UtilityFunctions::print("Failed to load Cubism Model.");
+        this->cleanup_csm();
+        return;
+    }
+
+    this->internal_model->SaveParameters();
+}
+
+void GDCubismUserModel::cleanup_csm() {
+    CSM_DELETE(this->model_settings);
+    if (this->_moc) {
+        this->_moc->DeleteModel(this->internal_model);
+    }
+    CubismMoc::Delete(this->_moc);
+
+    this->_moc = nullptr;
+    this->internal_model = nullptr;
+    this->model_settings = nullptr;
+}
 
 // ------------------------------------------------------------------ method(s)

@@ -113,7 +113,8 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
 	const Csm::csmInt32 *renderOrder = model->GetDrawableRenderOrders();
     const Csm::csmInt32 *maskCount = model->GetDrawableMaskCounts();
 
-    const Vector2 vct_size = InternalCubismUserModel::get_size(model);
+    const Vector2 vct_size = target_node->get_size();
+    const float ppunit = target_node->get_pp_unit();
     
     Node2D *meshes = memnew(Node2D);
     meshes->set_name(MESHES_NODE);
@@ -148,10 +149,10 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
         Ref<ArrayMesh> ary_mesh = node->get_mesh();
         Ref<ShaderMaterial> mat = request_shader_material(model, index, shaders);
         node->set_material(mat);
-		InternalCubismRenderer2D::update_mesh(model, index, ary_mesh);
+
+		InternalCubismRenderer2D::update_mesh(model, index, ary_mesh, ppunit);
         InternalCubismRenderer2D::update_material(model, index, mat);
         node->set_name(node_name);
-        node->set_texture(textures[model->GetDrawableTextureIndex(index)]);
         mat->set_shader_parameter("tex_main", textures[model->GetDrawableTextureIndex(index)]);
         node->set_z_index(renderOrder[index]);
         node->set_meta("index", index);
@@ -259,36 +260,56 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array s
 
 	String model_path = assets.get_base_dir().path_join(model_file);
 
-	PackedByteArray buffer = FileAccess::get_file_as_bytes(model_path);
-	
 	GDCubismUserModel *model = memnew(GDCubismUserModel);
     model->set_name(assets.get_file());
 	model->set_scene_file_path(assets);
 
-	InternalCubismUserModel *internal_model = CSM_NEW InternalCubismUserModel(model);
-	internal_model->LoadModel(buffer.ptr(), buffer.size());
+    model->load_model();
 
-	if (internal_model->GetModel() == nullptr || internal_model->GetModelMatrix() == nullptr) {
-		CSM_DELETE(internal_model);
-		internal_model = nullptr;
-	
+	if (model->get_internal_model() == nullptr) {
 		memdelete(model);
 
 		return nullptr;
 	}
 
+    CubismModel *internal_model = model->get_internal_model();
+
+    // Read Canvas Info
+    {
+        Live2D::Cubism::Core::csmVector2 vct_size;
+        Live2D::Cubism::Core::csmVector2 vct_origin;
+        Csm::csmFloat32 ppunit;
+
+        Live2D::Cubism::Core::csmReadCanvasInfo(internal_model->GetModel(), &vct_size, &vct_origin, &ppunit);
+
+        model->size = Vector2(vct_size.X, vct_size.Y);
+        model->origin = Vector2(vct_origin.X, vct_origin.Y);
+        model->pp_unit = ppunit;
+    }
+
+    //UserData
+    {
+        String path = file_refs.get("UserData", "");
+        if (!path.is_empty()) {
+            String buffer = FileAccess::get_file_as_string(model_path.path_join(path));
+            if(!buffer.is_empty()) {
+                model->user_data = JSON::parse_string(buffer);
+            }
+        }
+    }
+
 	// Load Parameters
     {
         Dictionary parameters;
-        Live2D::Cubism::Core::csmModel *csm_model  = internal_model->GetModel()->GetModel();
-        for(Csm::csmInt32 index = 0; index < internal_model->GetModel()->GetParameterCount(); index++) {
+        Live2D::Cubism::Core::csmModel *csm_model  = internal_model->GetModel();
+        for(Csm::csmInt32 index = 0; index < internal_model->GetParameterCount(); index++) {
             Dictionary param;
             StringName p_name = StringName(Live2D::Cubism::Core::csmGetParameterIds(csm_model)[index]);
             param["id"] = index;
             param["name"] = p_name;
-            param["min"] = internal_model->GetModel()->GetParameterMinimumValue(index);
-            param["max"] = internal_model->GetModel()->GetParameterMaximumValue(index);
-            param["default"] = internal_model->GetModel()->GetParameterDefaultValue(index);
+            param["min"] = internal_model->GetParameterMinimumValue(index);
+            param["max"] = internal_model->GetParameterMaximumValue(index);
+            param["default"] = internal_model->GetParameterDefaultValue(index);
 
             parameters[p_name] = param;
         }
@@ -306,13 +327,13 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array s
 	// Load Parts
     {
         Dictionary parts;
-        Live2D::Cubism::Core::csmModel *csm_model  = internal_model->GetModel()->GetModel();
-        for(Csm::csmInt32 index = 0; index < internal_model->GetModel()->GetPartCount(); index++) {
+        Live2D::Cubism::Core::csmModel *csm_model  = internal_model->GetModel();
+        for(Csm::csmInt32 index = 0; index < internal_model->GetPartCount(); index++) {
             String p_name = String(Live2D::Cubism::Core::csmGetPartIds(csm_model)[index]);
             Dictionary part;
             part["id"] = index;
             part["name"] = p_name;
-            part["default"] = internal_model->GetModel()->GetPartOpacity(index);
+            part["default"] = internal_model->GetPartOpacity(index);
             parts[p_name] = part;
         }
 
@@ -359,10 +380,8 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array s
 
 	// Prepare Meshes
 	{
-		build_model(internal_model->GetModel(), model, textures, shaders);
+		build_model(internal_model, model, textures, shaders);
 	}
-    
-    CSM_DELETE(internal_model);
 
     return model;
 }

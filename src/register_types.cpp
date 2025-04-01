@@ -21,7 +21,6 @@
 #include <gd_cubism_effect_physics.hpp>
 #include <gd_cubism_effect_motion.hpp>
 #include <gd_cubism_effect_pose.hpp>
-#include <gd_cubism_motion_entry.hpp>
 #include <gd_cubism_user_model.hpp>
 #include <register_types.hpp>
 #include <plugin.hpp>
@@ -78,12 +77,9 @@ void initialize_gd_cubism_module(ModuleInitializationLevel p_level) {
     GDREGISTER_CLASS(GDCubismEffectMotion);
     GDREGISTER_CLASS(GDCubismEffectPose);
 
-    ClassDB::register_class<GDCubismMotionQueueEntryHandle>();
-    ClassDB::register_class<GDCubismMotionEntry>();
-    ClassDB::register_class<GDCubismUserModel>();
-
-    ClassDB::register_class<GDCubismMotionLoader>();
-    ClassDB::register_class<GDCubismModelLoader>();    
+    GDREGISTER_CLASS(GDCubismUserModel);
+    GDREGISTER_CLASS(GDCubismMotionLoader);
+    GDREGISTER_CLASS(GDCubismModelLoader);    
         
     motionLoader.instantiate();
     modelLoader.instantiate();

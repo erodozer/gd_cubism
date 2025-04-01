@@ -4,6 +4,8 @@
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/json.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
+#include <godot_cpp/classes/animation_player.hpp>
+#include <godot_cpp/classes/animation_library.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 #include <importers/gd_cubism_model_importer.hpp>

@@ -8,7 +8,6 @@
 #include <Rendering/CubismRenderer.hpp>
 
 #include <private/internal_cubism_renderer_2d.hpp>
-#include <private/internal_cubism_user_model.hpp>
 #include <cfloat>
 
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -44,11 +43,10 @@ void InternalCubismRenderer2D::update_material(const Csm::CubismModel *model, co
 void InternalCubismRenderer2D::update_mesh(
     const Csm::CubismModel *model,
     const Csm::csmInt32 index,
-    const Ref<ArrayMesh> ary_mesh
+    const Ref<ArrayMesh> ary_mesh,
+    const float pp_unit
 )
 {
-    const float pp_unit = InternalCubismUserModel::get_ppunit(model);
-
     if (ary_mesh->get_surface_count() > 0) {
         const int size = model->GetDrawableVertexCount(index);
         const auto ptr = model->GetDrawableVertexPositions(index);
@@ -101,12 +99,10 @@ void InternalCubismRenderer2D::update_mesh(
     ary_mesh->set_custom_aabb(ary_mesh->get_aabb());
 }
 
-void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Array masks, int32_t mask_viewport_size)
+void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Array masks, const float ppunit, int32_t mask_viewport_size)
 {
     const Csm::csmInt32 *renderOrder = model->GetDrawableRenderOrders();
     const Csm::csmInt32 *maskCount = model->GetDrawableMaskCounts();
-
-    const float ppunit = InternalCubismUserModel::get_ppunit(model);
     
     // get the model's global transform to preform optimizations against
     const auto mesh_0 = Object::cast_to<MeshInstance2D>(meshes[0]);
@@ -129,7 +125,7 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
                 
         Ref<ArrayMesh> ary_mesh = node->get_mesh();
 
-        InternalCubismRenderer2D::update_mesh(model, index, ary_mesh);
+        InternalCubismRenderer2D::update_mesh(model, index, ary_mesh, ppunit);
         InternalCubismRenderer2D::update_material(model, index, mat);
         node->set_z_index(renderOrder[index]);
 

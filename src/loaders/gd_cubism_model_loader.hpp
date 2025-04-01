@@ -5,11 +5,9 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/classes/global_constants.hpp>
 #include <godot_cpp/classes/resource_format_loader.hpp>
-#include <godot_cpp/classes/animation.hpp>
 #include <godot_cpp/classes/json.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
-#include <private/internal_cubism_user_model.hpp>
 #include <private/internal_cubism_renderer_2d.hpp>
 #include <gd_cubism_user_model.hpp>
 
@@ -24,7 +22,6 @@ class GDCubismModelLoader : public ResourceFormatLoader {
 
 protected:
     static void _bind_methods() {
-		
         ClassDB::bind_static_method("GDCubismModelLoader", D_METHOD("load_model", "model_file", "shaders", "generate_mipmaps"), &GDCubismModelLoader::load_model);
 	}
 
