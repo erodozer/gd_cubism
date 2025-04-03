@@ -30,7 +30,7 @@ protected:
 	}
 
 private:
-	CubismMotionManager* _motion_manager;
+	CubismMotionManager* _motion_manager = nullptr;
 	Csm::csmMap<String,Csm::CubismMotion*> _map_motion;
 	Csm::csmVector<Csm::CubismIdHandle> _list_eye_blink;
 	Csm::csmVector<Csm::CubismIdHandle> _list_lipsync;
@@ -85,7 +85,7 @@ public:
 
     virtual void _cubism_init(GDCubismUserModel* model) override {
         if(this->_initialized == true) return;
-        
+
 		ICubismModelSetting *model_setting = model->get_model_settings();
 		if(model_setting->GetMotionGroupCount() == 0){
 			this->_initialized = true;
@@ -94,8 +94,8 @@ public:
 
 		String model_path = model->get_scene_file_path();
 
-    	_motion_manager = CSM_NEW CubismMotionManager();
-    	_motion_manager->SetEventCallback(CubismDefaultMotionEventCallback, model);
+    	this->_motion_manager = CSM_NEW CubismMotionManager();
+    	this->_motion_manager->SetEventCallback(CubismDefaultMotionEventCallback, model);
 
 		// EyeBlink(Parameters)
 		{

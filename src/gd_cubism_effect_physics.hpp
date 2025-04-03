@@ -25,7 +25,7 @@ protected:
 	}
 
 private:
-	CubismPhysics* _physics;
+	CubismPhysics* _physics = nullptr;
 	
 public:
     virtual void _cubism_init(GDCubismUserModel* model) override {
@@ -47,7 +47,7 @@ public:
         if(this->_initialized == false) return;
 		if(this->_active == false) return;
 		if(this->_physics == nullptr) return;
-        
+
 		this->_physics->Evaluate(model->get_internal_model(), (float_t)delta);
     }
 

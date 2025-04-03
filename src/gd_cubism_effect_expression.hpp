@@ -27,7 +27,7 @@ protected:
 	}
 
 private:
-	CubismExpressionMotionManager* _expressionManager;
+	CubismExpressionMotionManager* _expressionManager = nullptr;
 	csmMap<String, CubismExpressionMotion*> _expressions;
 	String _active_expression;
 	
@@ -86,7 +86,8 @@ public:
 	virtual void _cubism_process(GDCubismUserModel* model, const double delta) override {
         if(this->_initialized == false) return;
         if(this->_active == false) return;
-    
+		if(this->_expressionManager == nullptr) return;
+		
 		this->_expressionManager->UpdateMotion(model->get_internal_model(), delta);
     }
 

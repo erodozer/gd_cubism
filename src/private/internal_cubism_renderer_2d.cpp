@@ -103,6 +103,8 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
 {
     const Csm::csmInt32 *renderOrder = model->GetDrawableRenderOrders();
     const Csm::csmInt32 *maskCount = model->GetDrawableMaskCounts();
+
+    if (meshes.is_empty()) return;
     
     // get the model's global transform to preform optimizations against
     const auto mesh_0 = Object::cast_to<MeshInstance2D>(meshes[0]);

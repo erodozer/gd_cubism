@@ -6,8 +6,6 @@
 #include <CubismFramework.hpp>
 #include <Rendering/CubismRenderer.hpp>
 
-#include <private/internal_cubism_renderer_2d.hpp>
-
 
 // ------------------------------------------------------------------ define(s)
 // --------------------------------------------------------------- namespace(s)

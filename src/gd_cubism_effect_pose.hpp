@@ -25,7 +25,7 @@ protected:
 	}
 
 private:
-	CubismPose* _pose;
+	CubismPose* _pose = nullptr;
 	
 public:
     virtual void _cubism_init(GDCubismUserModel* model) override {
@@ -36,7 +36,7 @@ public:
         if (!path.is_empty()) {
             PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(path));
             if(buffer.size() > 0) {
-				_pose = CubismPose::Create(buffer.ptr(), buffer.size());
+				this->_pose = CubismPose::Create(buffer.ptr(), buffer.size());
             }
         }
 
