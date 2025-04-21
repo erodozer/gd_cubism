@@ -364,6 +364,8 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array s
 			Ref<Texture2D> tex;
 			// allow dynamically loading image textures for models provided from disk or user data
 			if (!res_loader->exists(texture_pathname)) {
+                ERR_FAIL_COND_V_MSG(!FileAccess::file_exists(texture_pathname), nullptr, "Model texture does not exists.  Make sure the paths in the model3.json match what's available in the file system");
+                
 				Ref<Image> img = Image::load_from_file(texture_pathname);
                 if (generate_mipmaps) {
                     img->generate_mipmaps();
