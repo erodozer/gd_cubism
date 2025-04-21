@@ -89,6 +89,8 @@ Variant GDCubismMotionLoader::_load(const String& p_path, const String& p_origin
     double fps = meta.get("FPS", 60.0);
     anim->set_step(1.0 / fps);
 
+    double last_frame = 0.0;
+
     // parse motion curves
     Array curves = motion["Curves"];
     for (uint32_t c_idx = 0; c_idx < curves.size(); c_idx++) {
@@ -193,11 +195,17 @@ Variant GDCubismMotionLoader::_load(const String& p_path, const String& p_origin
 
                 s_idx += 3;
             }
+
+            last_frame = Math::max(
+                last_frame,
+                anim->track_get_key_time(track, anim->track_get_key_count(track) - 1)
+            );
         }
     }
 
     double duration = meta.get("Duration", 1.0);
-    anim->set_length(duration);
+    
+    anim->set_length(Math::max(last_frame, duration));
     anim->set_path(p_path);
 
     return anim;
