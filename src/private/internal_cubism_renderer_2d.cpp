@@ -10,6 +10,7 @@
 #include <private/internal_cubism_renderer_2d.hpp>
 #include <cfloat>
 
+#include <godot_cpp/classes/time.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/classes/viewport_texture.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
@@ -140,6 +141,8 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
         );
     }
 
+    real_t frame_time = Time::get_singleton()->get_ticks_msec();
+
     for (int i = 0; i < masks.size(); i++)
     {
         SubViewport *viewport = Object::cast_to<SubViewport>(masks[i]);
@@ -170,6 +173,8 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
             continue;
         }
 
+        real_t debounce = viewport->get_meta("resize_debounce", 0.0);
+
         Vector2 mask_size = bounds.size;
         double scalar = 1.0;
         if (mask_viewport_size > 0) {
@@ -186,8 +191,17 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
         Vector2 viewport_offset = bounds.position;
         Transform2D transform = Transform2D(0, -viewport_offset);
         transform.scale(Vector2(scalar, scalar));
-        viewport->set_size(mask_size);
         viewport->set_canvas_transform(transform);
+
+        // limit frequency in which viewports are shrunken to avoid frequent allocations
+        if (mask_size >= viewport->get_size() || frame_time >= debounce) {
+            if (mask_size != viewport->get_size()) {
+                viewport->set_size(mask_size);
+            }
+
+            const real_t debounce_frequency = 5000.0;  // once every 5 seconds
+            viewport->set_meta("resize_debounce", frame_time + debounce_frequency);
+        }
 
         Array dependent_meshes = viewport->get_meta("meshes");
         for (int n = 0; n < dependent_meshes.size(); n++) {
