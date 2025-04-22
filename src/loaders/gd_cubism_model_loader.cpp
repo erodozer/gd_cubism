@@ -184,7 +184,7 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
         AABB bounds = node->get_mesh()->get_aabb();
         Vector2i viewport_size = Vector2i(bounds.size.x, bounds.size.y);
         Vector2 viewport_offset = Vector2(bounds.position.x, bounds.position.y);
-        viewport->set_size(viewport_size);
+        viewport->set_size(Vector2i(2,2));
         mat->set_shader_parameter("canvas_size", vct_size);
         mat->set_shader_parameter("mesh_offset", viewport_offset);
 
