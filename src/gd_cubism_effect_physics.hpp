@@ -31,7 +31,7 @@ public:
     virtual void _cubism_init(GDCubismUserModel* model) override {
         if(this->_initialized == true) return;
         
-		String path = model->get_model_settings()->GetPhysicsFileName();
+		String path = ((Dictionary)model->get_meta("filerefs", Dictionary())).get("Physics", "");
 		String _model_dir = model->get_scene_file_path().get_base_dir();
         if (!path.is_empty()) {
             PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(path));

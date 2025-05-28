@@ -365,30 +365,29 @@ void GDCubismUserModel::_on_remove_child_act(GDCubismEffect* node) {
 }
 
 void GDCubismUserModel::load_model() {
-    {
-        PackedByteArray buffer = FileAccess::get_file_as_bytes(this->get_scene_file_path());
-        if(buffer.size() == 0) {
-            UtilityFunctions::print("Unable to access model file");
-            return;
-        }
-    
-        this->model_settings = CSM_NEW CubismModelSettingJson(buffer.ptr(), buffer.size());
+    PackedByteArray settings_buffer = FileAccess::get_file_as_bytes(this->get_scene_file_path());
+    if(FileAccess::get_open_error() > 0 || settings_buffer.is_empty()) {
+        UtilityFunctions::print("Unable to access model file");
+        return;
+    }
 
-        if (this->model_settings == NULL) {
-            UtilityFunctions::print("Could not read model settings");
-            return;
-        }
+    this->model_settings = CSM_NEW CubismModelSettingJson(settings_buffer.ptr(), settings_buffer.size());
+
+    if (this->model_settings == NULL) {
+        UtilityFunctions::print("Could not read model settings");
+        return;
     }
 
     String _model_dir = this->get_scene_file_path().get_base_dir();
-    PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(this->model_settings->GetModelFileName()));
-    if(buffer.size() == 0) {
-        UtilityFunctions::print("Unable to access model file");
+    String _moc3_path = _model_dir.path_join(((Dictionary)this->get_meta("filerefs", Dictionary())).get("Moc", ""));
+    PackedByteArray moc3_buffer = FileAccess::get_file_as_bytes(_moc3_path);
+    if (FileAccess::get_open_error() > 0 || moc3_buffer.is_empty()) {
+        UtilityFunctions::print("Could not read moc3 file ", _moc3_path);
         this->cleanup_csm();
         return;
     }
     
-    this->_moc = CubismMoc::Create(buffer.ptr(), buffer.size(), false);
+    this->_moc = CubismMoc::Create(moc3_buffer.ptr(), moc3_buffer.size(), false);
 
     if (this->_moc == NULL)
     {

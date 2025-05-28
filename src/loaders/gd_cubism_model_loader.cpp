@@ -258,9 +258,10 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array s
 	String model_file = file_refs.get("Moc", "");
 	ERR_FAIL_COND_V_MSG(model_file.is_empty(), nullptr, "Could not open model path.  Moc3 path undefined");
 
-	String model_path = assets.get_base_dir().path_join(model_file);
+	String model_path = assets.get_base_dir();
 
 	GDCubismUserModel *model = memnew(GDCubismUserModel);
+    model->set_meta("filerefs", file_refs);
     model->set_name(assets.get_file());
 	model->set_scene_file_path(assets);
 
@@ -359,7 +360,7 @@ GDCubismUserModel* GDCubismModelLoader::load_model(const String &assets, Array s
 			String tex_filename = texture_files[index];
 			if (tex_filename.is_empty()) continue;
 			
-			String texture_pathname = assets.get_base_dir().path_join(tex_filename);
+			String texture_pathname = model_path.path_join(tex_filename);
 
 			Ref<Texture2D> tex;
 			// allow dynamically loading image textures for models provided from disk or user data
