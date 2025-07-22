@@ -54,23 +54,19 @@ GDCubismUserModel::~GDCubismUserModel() {
 
 
 void GDCubismUserModel::_notification(int p_what) {
+    if(p_what == NOTIFICATION_READY) {
+        this->prepare();
+    }
     if(!this->is_initialized()) {
         return;
     }
-
     // make sure to clear the SDK model when this node is deleted
     if (p_what == NOTIFICATION_PREDELETE) {
         this->effect_term();
         this->cleanup_csm();
     }
-
-    // apply mutated parameter values to the model
     if (p_what == NOTIFICATION_PROCESS) {
-        
-    }
-    // reset parameters set by nested animation players and emotions back to their 
-    if (p_what == NOTIFICATION_INTERNAL_PROCESS) {
-
+        this->advance(this->get_process_delta_time());
     }
 }
 
@@ -308,7 +304,7 @@ void GDCubismUserModel::_get_property_list(List<godot::PropertyInfo> *p_list) {
     }
 }
 
-void GDCubismUserModel::_ready() {
+void GDCubismUserModel::prepare() {
     this->cubism_effect_dirty = true;
 
     // reattach GDCubismModel
@@ -345,11 +341,6 @@ void GDCubismUserModel::_ready() {
             this->ary_masks.append(mask);
         }
     }
-}
-
-
-void GDCubismUserModel::_process(double delta) {
-    this->advance(delta);
 }
 
 

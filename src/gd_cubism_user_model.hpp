@@ -224,8 +224,7 @@ public:
     void set_mask_viewport_size(const int32_t size) { this->mask_viewport_size = size; }
     int32_t get_mask_viewport_size() const { return this->mask_viewport_size; }
 
-    void _ready() override;
-    void _process(double delta) override;
+    void prepare();
 
     void _on_append_child_act(GDCubismEffect* node);
     void _on_remove_child_act(GDCubismEffect* node);
