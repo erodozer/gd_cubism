@@ -172,6 +172,10 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
 
         Vector2 mask_size = bounds.size;
         double scalar = 1.0;
+        
+        // increase mask to be match the largest seen bound size for a mesh collection
+        // to prevent UVs from ever going outside the edges
+        // if your masks ever get too permanently large, your model likely needs to be adjusted
         if (mask_viewport_size > 0) {
             if (mask_size.x > mask_viewport_size || mask_size.y > mask_viewport_size) {
                 scalar = mask_viewport_size / Math::max(mask_size.x, mask_size.y);
@@ -182,7 +186,11 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
                 mask_size = Vector2(mask_viewport_size, mask_viewport_size) * ratio;
             }
         }
-
+        if (mask_size > viewport->get_size() || (Vector2i)viewport->get_meta("max_size", Vector2i(2,2)) > viewport->get_size()) {
+            viewport->set_size(mask_size);
+            viewport->set_meta("max_size", mask_size);
+        }
+        
         Vector2 viewport_offset = bounds.position;
         Transform2D transform = Transform2D(0, -viewport_offset);
         transform.scale(Vector2(scalar, scalar));

@@ -8,8 +8,8 @@ uniform vec4 color_base : source_color;
 uniform vec4 color_screen : source_color;
 uniform vec4 color_multiply : source_color;
 uniform vec4 channel : source_color;
-uniform sampler2D tex_main : filter_linear_mipmap;
-uniform sampler2D tex_mask : filter_linear_mipmap;
+uniform sampler2D tex_main : filter_linear_mipmap, repeat_disable;
+uniform sampler2D tex_mask : filter_linear_mipmap, repeat_disable;
 
 uniform float mask_scale;
 uniform vec2 canvas_size;
