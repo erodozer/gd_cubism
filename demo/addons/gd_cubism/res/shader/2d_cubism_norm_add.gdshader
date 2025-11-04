@@ -8,7 +8,7 @@ uniform vec4 color_base : source_color;
 uniform vec4 color_screen : source_color;
 uniform vec4 color_multiply : source_color;
 uniform vec4 channel : source_color;
-uniform sampler2D tex_main : filter_linear_mipmap;
+uniform sampler2D tex_main : filter_linear_mipmap, repeat_disable;
 
 varying vec4 modulate;
 

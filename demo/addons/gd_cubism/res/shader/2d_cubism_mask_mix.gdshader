@@ -8,8 +8,8 @@ uniform vec4 color_base : source_color;
 uniform vec4 color_screen : source_color;
 uniform vec4 color_multiply : source_color;
 uniform vec4 channel : source_color;
-uniform sampler2D tex_main : filter_linear_mipmap;
-uniform sampler2D tex_mask : filter_linear_mipmap;
+uniform sampler2D tex_main : filter_linear_mipmap, repeat_disable;
+uniform sampler2D tex_mask : filter_linear_mipmap, repeat_disable, hint_default_transparent;
 
 uniform float mask_scale;
 uniform vec2 canvas_size;
@@ -27,12 +27,15 @@ void vertex() {
 }
 
 void fragment() {
+	if (MASK_UV.x > 1.0 || MASK_UV.y > 1.0 || MASK_UV.x < 0.0 || MASK_UV.y < 0.0) {
+		discard;
+	}
     vec4 color_tex = texture(tex_main, UV);
     color_tex.rgb = color_tex.rgb * color_multiply.rgb;
 
     // premul alpha
     color_tex.rgb = color_tex.rgb + color_screen.rgb - (color_tex.rgb * color_screen.rgb);
-    vec4 color_for_mask = color_tex * color_base * modulate;
+    vec4 color_for_mask = color_tex * color_base;
     color_for_mask.rgb = color_for_mask.rgb * color_for_mask.a;
 
     vec4 clip_mask = texture(tex_mask, MASK_UV) * channel;
