@@ -2,6 +2,7 @@
 #include <godot_cpp/classes/resource_saver.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/placeholder_texture2d.hpp>
 #include <godot_cpp/classes/sub_viewport.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/json.hpp>
@@ -31,10 +32,8 @@ MeshInstance2D* request_mesh_instance() {
 
 Ref<ShaderMaterial> request_shader_material(const Csm::CubismModel *model, const Csm::csmInt32 index, Array shaders) {
     GDCubismShader e = GD_CUBISM_SHADER_NORM_MIX;
-    if (model->GetDrawableMaskCounts()[index] == 0)
+    switch (model->GetDrawableBlendMode(index))
     {
-        switch (model->GetDrawableBlendMode(index))
-        {
         case CubismRenderer::CubismBlendMode_Additive:
             e = GD_CUBISM_SHADER_NORM_ADD;
             break;
@@ -47,66 +46,9 @@ Ref<ShaderMaterial> request_shader_material(const Csm::CubismModel *model, const
         default:
             e = GD_CUBISM_SHADER_NORM_MIX;
             break;
-        }
-    }
-    else if (model->GetDrawableInvertedMask(index) == false)
-    {
-        switch (model->GetDrawableBlendMode(index))
-        {
-        case CubismRenderer::CubismBlendMode_Additive:
-            e = GD_CUBISM_SHADER_MASK_ADD;
-            break;
-        case CubismRenderer::CubismBlendMode_Normal:
-            e = GD_CUBISM_SHADER_MASK_MIX;
-            break;
-        case CubismRenderer::CubismBlendMode_Multiplicative:
-            e = GD_CUBISM_SHADER_MASK_MUL;
-            break;
-        default:
-            e = GD_CUBISM_SHADER_MASK_MIX;
-            break;
-        }
-    }
-    else
-    {
-        switch (model->GetDrawableBlendMode(index))
-        {
-        case CubismRenderer::CubismBlendMode_Additive:
-            e = GD_CUBISM_SHADER_MASK_ADD_INV;
-            break;
-        case CubismRenderer::CubismBlendMode_Normal:
-            e = GD_CUBISM_SHADER_MASK_MIX_INV;
-            break;
-        case CubismRenderer::CubismBlendMode_Multiplicative:
-            e = GD_CUBISM_SHADER_MASK_MUL_INV;
-            break;
-        default:
-            e = GD_CUBISM_SHADER_MASK_MIX_INV;
-            break;
-        }
     }
 
-    Ref<Shader> shader = Object::cast_to<Shader>(shaders[e]);
-    // TODO change to using canvas item uniforms once Godot 4.4 is stable
-    shader->set_local_to_scene(true);
-
-	Ref<ShaderMaterial> mat;
-	mat.instantiate();
-        
-    mat->set_shader(shader);
-    mat->set_shader_parameter("channel", Vector4(0.0, 0.0, 0.0, 1.0));
-    mat->set_local_to_scene(true);
-
-    return mat;
-}
-
-Ref<ShaderMaterial> request_mask_material(Array shaders) {
-    Ref<ShaderMaterial> mat;
-    Ref<Shader> shader = Object::cast_to<Shader>(shaders[GD_CUBISM_SHADER_MASK]);
-	mat.instantiate();
-    mat->set_shader(shader);
-    
-    return mat;
+    return shaders[e];
 }
 
 void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textures, Array shaders) {
@@ -116,6 +58,24 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
     const Vector2 vct_size = target_node->get_size();
     const float ppunit = target_node->get_pp_unit();
     
+    Ref<PlaceholderTexture2D> placeholder;
+    placeholder.instantiate();
+
+    Array base_materials;
+    base_materials.resize(shaders.size());
+    for (auto i = 0; i < shaders.size(); i++) {
+        Ref<Shader> shader = Object::cast_to<Shader>(shaders[i]);
+        shader->set_local_to_scene(true);
+
+        Ref<ShaderMaterial> mat;
+        mat.instantiate();
+            
+        mat->set_shader(shader);
+        mat->set_shader_parameter("tex_mask", placeholder);
+        mat->set_local_to_scene(true);
+        base_materials[i] = mat;
+    }
+
     Node2D *meshes = memnew(Node2D);
     meshes->set_name(MESHES_NODE);
     target_node->add_child(meshes);
@@ -147,15 +107,15 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
             mesh_instances[index] = node->get_mesh();
         }
         Ref<ArrayMesh> ary_mesh = node->get_mesh();
-        Ref<ShaderMaterial> mat = request_shader_material(model, index, shaders);
+        Ref<ShaderMaterial> mat = request_shader_material(model, index, base_materials);
         node->set_material(mat);
-
+        
 		InternalCubismRenderer2D::update_mesh(model, index, ary_mesh, ppunit);
-        InternalCubismRenderer2D::update_material(model, index, mat);
+        InternalCubismRenderer2D::update_material(model, index, node);
         node->set_name(node_name);
-        mat->set_shader_parameter("tex_main", textures[model->GetDrawableTextureIndex(index)]);
         node->set_z_index(renderOrder[index]);
         node->set_meta("index", index);
+        node->set_texture(textures[model->GetDrawableTextureIndex(index)]);
 		
         const bool visible = model->GetDrawableDynamicFlagIsVisible(index) && model->GetDrawableOpacity(index) > 0.0f;
         node->set_visible(visible);
@@ -165,6 +125,12 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
 
         // build mask
         if (model->GetDrawableMaskCounts()[index] == 0) continue;
+
+        node->set_instance_shader_parameter("has_mask", true);
+        node->set_instance_shader_parameter("invert", model->GetDrawableInvertedMask(index));
+        
+        mat = mat->duplicate();
+        node->set_material(mat);
         
         SubViewport* viewport = memnew(SubViewport);
         viewport->set_disable_3d(true);
@@ -213,15 +179,15 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
             } else {
                 mesh_instances[j] = node->get_mesh();
             }
-            Ref<ShaderMaterial> mat = request_mask_material(shaders);
+            Ref<ShaderMaterial> mat = base_materials[GD_CUBISM_SHADER_MASK];
             
             node->set_name(mask_name);
             node->set_material(mat);
-            mat->set_shader_parameter("channel", Vector4(0.0, 0.0, 0.0, 1.0));
-            mat->set_shader_parameter("tex_main", textures[model->GetDrawableTextureIndex(j)]);
+            
             node->set_z_index(renderOrder[j]);
             node->set_meta("index", j);
             node->set_meta("mask_index", m_index);
+            node->set_texture(textures[model->GetDrawableTextureIndex(j)]);
             node->set_visible(true);
 
             viewport->add_child(node);
@@ -397,15 +363,7 @@ Variant GDCubismModelLoader::_load(const String &p_path, const String &p_origina
     shaders[GD_CUBISM_SHADER_NORM_ADD] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_norm_add.gdshader");
     shaders[GD_CUBISM_SHADER_NORM_MIX] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_norm_mix.gdshader");
     shaders[GD_CUBISM_SHADER_NORM_MUL] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_norm_mul.gdshader");
-
     shaders[GD_CUBISM_SHADER_MASK] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_mask.gdshader");
-
-    shaders[GD_CUBISM_SHADER_MASK_ADD] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_mask_add.gdshader");
-    shaders[GD_CUBISM_SHADER_MASK_ADD_INV] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_mask_add_inv.gdshader");
-    shaders[GD_CUBISM_SHADER_MASK_MIX] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_mask_mix.gdshader");
-    shaders[GD_CUBISM_SHADER_MASK_MIX_INV] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_mask_mix_inv.gdshader");
-    shaders[GD_CUBISM_SHADER_MASK_MUL] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_mask_mul.gdshader");
-    shaders[GD_CUBISM_SHADER_MASK_MUL_INV] = res_loader->load("res://addons/gd_cubism/res/shader/2d_cubism_mask_mul_inv.gdshader");
 
     GDCubismUserModel *m = this->load_model(
         p_path,

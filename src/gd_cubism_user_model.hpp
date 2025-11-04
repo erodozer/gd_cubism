@@ -104,6 +104,8 @@ private:
 
 protected:
     static void _bind_methods() {
+        ClassDB::bind_method(D_METHOD("is_initialized"), &GDCubismUserModel::is_initialized);
+
         // csm
         ClassDB::bind_method(D_METHOD("csm_get_version"), &GDCubismUserModel::csm_get_version);
 
