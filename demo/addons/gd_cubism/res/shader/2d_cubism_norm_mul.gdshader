@@ -11,7 +11,9 @@ instance uniform vec4 color_screen: source_color;
 instance uniform vec4 color_multiply: source_color;
 instance uniform int tex_idx = 0;
 uniform sampler2D tex_main[16] : filter_linear_mipmap, repeat_disable;
+uniform sampler2D tex_main_nofilter[16] : filter_nearest_mipmap, repeat_disable;
 varying vec4 modulate;
+instance uniform bool filter = true;
 
 // masking
 instance uniform bool has_mask = false;
@@ -39,7 +41,12 @@ void fragment() {
 		}
 	}
 	
-    vec4 color_tex = texture(tex_main[tex_idx], UV);
+    vec4 color_tex;
+    if (filter) {
+        color_tex = texture(tex_main[tex_idx], UV);
+    } else {
+        color_tex = texture(tex_main_nofilter[tex_idx], UV);
+    }
     color_tex.rgb = color_tex.rgb * color_multiply.rgb;
 
     // premul alpha

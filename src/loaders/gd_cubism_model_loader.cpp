@@ -72,6 +72,7 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
             
         mat->set_shader(shader);
         mat->set_shader_parameter("tex_main", textures);
+        mat->set_shader_parameter("tex_main_nofilter", textures);
         mat->set_shader_parameter("tex_mask", placeholder);
         mat->set_local_to_scene(true);
         base_materials[i] = mat;
