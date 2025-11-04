@@ -34,11 +34,11 @@ const Vector4 make_vector4(const Live2D::Cubism::Core::csmVector4 &src_vec4);
 
 // ----------------------------------------------------------- class:forward(s)
 // ------------------------------------------------------------------- class(s)
-void InternalCubismRenderer2D::update_material(const Csm::CubismModel *model, const Csm::csmInt32 index, const Ref<ShaderMaterial> mat)
+void InternalCubismRenderer2D::update_material(const Csm::CubismModel *model, const Csm::csmInt32 index, MeshInstance2D *mesh)
 {
-    mat->set_shader_parameter("color_base", Vector4(1.0, 1.0, 1.0, model->GetDrawableOpacity(index)));
-    mat->set_shader_parameter("color_screen", make_vector4(model->GetDrawableScreenColor(index)));
-    mat->set_shader_parameter("color_multiply", make_vector4(model->GetDrawableMultiplyColor(index)));
+    mesh->set_instance_shader_parameter("color_base", Vector4(1.0, 1.0, 1.0, model->GetDrawableOpacity(index)));
+    mesh->set_instance_shader_parameter("color_screen", make_vector4(model->GetDrawableScreenColor(index)));
+    mesh->set_instance_shader_parameter("color_multiply", make_vector4(model->GetDrawableMultiplyColor(index)));
 }
 
 void InternalCubismRenderer2D::update_mesh(
@@ -124,12 +124,10 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
 
         const bool visible = model->GetDrawableDynamicFlagIsVisible(index) && model->GetDrawableOpacity(index) > 0.0f;
         node->set_visible(visible);
-        Ref<ShaderMaterial> mat = node->get_material();
-                
         Ref<ArrayMesh> ary_mesh = node->get_mesh();
 
         InternalCubismRenderer2D::update_mesh(model, index, ary_mesh, ppunit);
-        InternalCubismRenderer2D::update_material(model, index, mat);
+        InternalCubismRenderer2D::update_material(model, index, node);
         node->set_z_index(renderOrder[index]);
 
         // adjust real bounds to prevent the mesh being culled

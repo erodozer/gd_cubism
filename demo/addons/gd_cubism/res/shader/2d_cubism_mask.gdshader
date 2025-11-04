@@ -4,9 +4,10 @@
 shader_type canvas_item;
 render_mode blend_mix, unshaded;
 
-uniform vec4 channel : source_color;
-uniform sampler2D tex_main : filter_linear_mipmap, repeat_disable;
+const vec4 channel = vec4(0,0,0,1);
+uniform sampler2D tex_main[16] : filter_linear_mipmap, repeat_disable;
+instance uniform int tex_idx;
 
 void fragment() {
-    COLOR = channel * texture(tex_main, UV).a;
+    COLOR = channel * texture(tex_main[tex_idx], UV).a;
 }
