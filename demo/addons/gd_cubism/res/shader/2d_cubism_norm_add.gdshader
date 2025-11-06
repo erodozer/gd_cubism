@@ -62,7 +62,7 @@ void fragment() {
 		if (invert) {
             mask_val = 1.0 - mask_val;
         }
-	    color_for_mask = color_for_mask * mask_val;
+	    color_for_mask = color_for_mask * mask_val * modulate;
 	    COLOR = vec4(color_for_mask.rgb, 0.0);
 	} else {
 		// premul alpha

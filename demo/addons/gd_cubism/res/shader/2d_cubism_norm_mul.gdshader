@@ -68,7 +68,7 @@ void fragment() {
             color_for_mask.g + (1.0 - color_for_mask.a),
             color_for_mask.b + (1.0 - color_for_mask.a),
             1.0
-        );
+        ) * modulate;
 	} else {
 		// premul alpha
 	    vec4 color = color_tex * color_base * modulate;
