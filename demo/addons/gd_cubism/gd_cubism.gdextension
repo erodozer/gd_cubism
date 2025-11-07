@@ -1,25 +1,23 @@
 [configuration]
-
 entry_symbol = "gd_cubism_library_init"
-compatibility_minimum = 4.4
+compatibility_minimum = "4.4"
 
 [libraries]
+macos.debug = "res://addons/gd_cubism/bin/macos/libgd_cubism.macos.debug.framework"
+macos.release = "res://addons/gd_cubism/bin/macos/libgd_cubism.macos.release.framework"
+windows.debug.x86_64 = "res://addons/gd_cubism/bin/windows/x86_64/libgd_cubism.windows.debug.x86_64.dll"
+windows.release.x86_64 = "res://addons/gd_cubism/bin/windows/x86_64/libgd_cubism.windows.release.x86_64.dll"
+linux.debug.x86_64 = "res://addons/gd_cubism/bin/linux/x86_64/libgd_cubism.linux.debug.x86_64.so"
+linux.release.x86_64 = "res://addons/gd_cubism/bin/linux/x86_64/libgd_cubism.linux.release.x86_64.so"
+ios.debug = "res://addons/gd_cubism/bin/ios/libgd_cubism.ios.debug.dylib"
+ios.release = "res://addons/gd_cubism/bin/ios/libgd_cubism.ios.release.dylib"
+android.debug.arm32 = "res://addons/gd_cubism/bin/android/arm32/libgd_cubism.android.debug.arm32.so"
+android.release.arm32 = "res://addons/gd_cubism/bin/android/arm32/libgd_cubism.android.release.arm32.so"
+android.debug.arm64 = "res://addons/gd_cubism/bin/android/arm64/libgd_cubism.android.debug.arm64.so"
+android.release.arm64 = "res://addons/gd_cubism/bin/android/arm64/libgd_cubism.android.release.arm64.so"
 
-macos.debug = "res://addons/gd_cubism/bin/libgd_cubism.macos.debug.framework"
-macos.release = "res://addons/gd_cubism/bin/libgd_cubism.macos.release.framework"
-windows.debug.x86_64 = "res://addons/gd_cubism/bin/libgd_cubism.windows.debug.x86_64.dll"
-windows.release.x86_64 = "res://addons/gd_cubism/bin/libgd_cubism.windows.release.x86_64.dll"
-linux.debug.x86_64 = "res://addons/gd_cubism/bin/libgd_cubism.linux.debug.x86_64.so"
-linux.release.x86_64 = "res://addons/gd_cubism/bin/libgd_cubism.linux.release.x86_64.so"
-# linux.debug.arm64 = "res://addons/gd_cubism/bin/libgd_cubism.linux.debug.arm64.so"
-# linux.release.arm64 = "res://addons/gd_cubism/bin/libgd_cubism.linux.release.arm64.so"
-# linux.debug.rv64 = "res://addons/gd_cubism/bin/libgd_cubism.linux.debug.rv64.so"
-# linux.release.rv64 = "res://addons/gd_cubism/bin/libgd_cubism.linux.release.rv64.so"
-ios.debug.arm64 = "res://addons/gd_cubism/bin/libgd_cubism.ios.debug.arm64.dylib"
-ios.release.arm64 = "res://addons/gd_cubism/bin/libgd_cubism.ios.release.arm64.dylib"
-ios.debug.universal = "res://addons/gd_cubism/bin/libgd_cubism.ios.debug.universal.dylib"
-ios.release.universal = "res://addons/gd_cubism/bin/libgd_cubism.ios.release.universal.dylib"
-android.debug.arm32 = "res://addons/gd_cubism/bin/libgd_cubism.android.debug.arm32.so"
-android.release.arm32 = "res://addons/gd_cubism/bin/libgd_cubism.android.release.arm32.so"
-android.debug.arm64 = "res://addons/gd_cubism/bin/libgd_cubism.android.debug.arm64.so"
-android.release.arm64 = "res://addons/gd_cubism/bin/libgd_cubism.android.release.arm64.so"
+[dependencies]
+macos.universal = {"res://addons/gd_cubism/bin/macos/libLive2DCubismCore.dylib": ""}
+windows.x86_64 = {"res://addons/gd_cubism/bin/windows/x86_64/Live2DCubismCore.dll": ""}
+linux.x86_64 = {"res://addons/gd_cubism/bin/linux/x86_64/libLive2DCubismCore.so": ""}
+

@@ -135,7 +135,7 @@ def generate_gdextension() -> configparser.ConfigParser:
 
     gdextension.add_section("configuration")
     gdextension.set("configuration", "entry_symbol", '"gd_cubism_library_init"')
-    gdextension.set("configuration", "compatibility_minimum", '"4.3"')
+    gdextension.set("configuration", "compatibility_minimum", '"4.4"')
 
     gdextension.add_section("libraries")
 
