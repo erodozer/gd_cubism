@@ -187,9 +187,10 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
                 mask_size = Vector2(mask_viewport_size, mask_viewport_size) * ratio;
             }
         }
-        if (mask_size > viewport->get_size() || (Vector2i)viewport->get_meta("max_size", Vector2i(2,2)) > viewport->get_size()) {
+        Vector2i current_size = viewport->get_size();
+
+        if (mask_size.x > current_size.x || mask_size.y > current_size.y) {
             viewport->set_size(mask_size);
-            viewport->set_meta("max_size", mask_size);
         }
         
         Vector2 viewport_offset = bounds.position;
