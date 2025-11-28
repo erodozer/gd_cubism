@@ -37,6 +37,7 @@ public:
             PackedByteArray buffer = FileAccess::get_file_as_bytes(_model_dir.path_join(path));
 			if (buffer.size() > 0) {
 				_physics = CubismPhysics::Create(buffer.ptr(), buffer.size());
+				_physics->Stabilization(model->get_internal_model());
 			}
 		}
 

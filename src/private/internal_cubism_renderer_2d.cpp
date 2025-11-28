@@ -100,10 +100,9 @@ void InternalCubismRenderer2D::update_mesh(
     ary_mesh->set_custom_aabb(ary_mesh->get_aabb());
 }
 
-void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Array masks, const float ppunit, int32_t mask_viewport_size)
+void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Array masks, const float ppunit)
 {
     const Csm::csmInt32 *renderOrder = model->GetDrawableRenderOrders();
-    const Csm::csmInt32 *maskCount = model->GetDrawableMaskCounts();
 
     if (meshes.is_empty()) return;
     
@@ -143,68 +142,44 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
 
     for (int i = 0; i < masks.size(); i++)
     {
-        SubViewport *viewport = Object::cast_to<SubViewport>(masks[i]);
+        Node2D *mask = Object::cast_to<Node2D>(masks[i]);
+        Vector2 tex_size = Object::cast_to<SubViewport>(mask->get_parent())->get_size();
+        Vector4 layout = mask->get_meta("layout_bounds", Vector4(0.0, 0.0, 2.0, 2.0));
+        Rect2 layout_bounds(
+            Vector2(layout.x, layout.y) * tex_size,
+            Vector2(layout.z, layout.w) * tex_size
+        );
 
-        Ref<ArrayMesh> mesh = Object::cast_to<MeshInstance2D>(viewport->get_child(0))->get_mesh();
+        Ref<ArrayMesh> mesh = Object::cast_to<MeshInstance2D>(mask->get_child(0))->get_mesh();
         AABB aabb = mesh->get_custom_aabb();
 
-        for (int n = 1; n < viewport->get_child_count(); n++) {
-            Ref<ArrayMesh> mesh = Object::cast_to<MeshInstance2D>(viewport->get_child(n))->get_mesh();
+        for (int n = 1; n < mask->get_child_count(); n++) {
+            Ref<ArrayMesh> mesh = Object::cast_to<MeshInstance2D>(mask->get_child(n))->get_mesh();
             aabb = aabb.merge(mesh->get_custom_aabb());
         }
         aabb = aabb.grow(4); // adds padding around the mask for safety
 
         Rect2 bounds(aabb.position.x, aabb.position.y, aabb.size.x, aabb.size.y);
 
-        // detect if the canvas item is going to be culled
-        // only cull viewports when not looking at the model in the editor
-        Rect2 bounds_in_viewport = viewport_transform.xform(bounds);
-        const bool is_culled = 
-            !Engine::get_singleton()->is_editor_hint() &&
-            !(
-                viewport_bounds.intersects(bounds_in_viewport) 
-                || viewport_bounds.encloses(bounds_in_viewport)
-            );
-
-        if (is_culled){
-            viewport->set_size(Vector2i(2,2));
-            continue;
-        }
-
+        // figure out the scale required to fit the mask into its cell
         Vector2 mask_size = bounds.size;
+        Vector2 cell_size = layout_bounds.size;
+        Transform2D target_bounds = Transform2D(0, -bounds.position);
         double scalar = 1.0;
         
-        // increase mask to be match the largest seen bound size for a mesh collection
-        // to prevent UVs from ever going outside the edges
-        // if your masks ever get too permanently large, your model likely needs to be adjusted
-        if (mask_viewport_size > 0) {
-            if (mask_size.x > mask_viewport_size || mask_size.y > mask_viewport_size) {
-                scalar = mask_viewport_size / Math::max(mask_size.x, mask_size.y);
-                Vector2 ratio = Vector2(
-                    Math::min(1.0f, mask_size.x / mask_size.y),
-                    Math::min(1.0f, mask_size.y / mask_size.x)
-                );
-                mask_size = Vector2(mask_viewport_size, mask_viewport_size) * ratio;
-            }
+        if (mask_size.x > cell_size.x || mask_size.y > cell_size.y) {
+            scalar = cell_size.x / Math::max(mask_size.x, mask_size.y);
+            target_bounds = target_bounds.scaled(Vector2(scalar, scalar));
         }
-        Vector2i current_size = viewport->get_size();
-
-        if (mask_size.x > current_size.x || mask_size.y > current_size.y) {
-            viewport->set_size(mask_size);
-        }
+        target_bounds = target_bounds.translated(layout_bounds.position);
+        mask->set_transform(target_bounds);
         
-        Vector2 viewport_offset = bounds.position;
-        Transform2D transform = Transform2D(0, -viewport_offset);
-        transform.scale(Vector2(scalar, scalar));
-        viewport->set_canvas_transform(transform);
-
-        Array dependent_meshes = viewport->get_meta("meshes");
+        Array dependent_meshes = mask->get_meta("meshes");
         for (int n = 0; n < dependent_meshes.size(); n++) {
-            MeshInstance2D *mesh = Object::cast_to<MeshInstance2D>(viewport->get_node_or_null(dependent_meshes[n]));
-            Ref<ShaderMaterial> mat = mesh->get_material();
+            MeshInstance2D *mesh = Object::cast_to<MeshInstance2D>(mask->get_node_or_null(dependent_meshes[n]));
 
-            mat->set_shader_parameter("mask_scale", scalar);
-            mat->set_shader_parameter("mesh_offset", viewport_offset);
+            mesh->set_instance_shader_parameter("mask_rect", Vector4(bounds.position.x, bounds.position.y, bounds.size.x, bounds.size.y));
+            mesh->set_instance_shader_parameter("layout_rect", Vector4(layout_bounds.position.x, layout_bounds.position.y, layout_bounds.size.x, layout_bounds.size.y));
         }
     }
 }

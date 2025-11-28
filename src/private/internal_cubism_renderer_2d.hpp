@@ -29,7 +29,7 @@ using namespace godot;
 class InternalCubismRenderer2D
 {
 public:
-    static void update(const Csm::CubismModel *model, const Array meshes, Array masks, const float ppunit, int32_t viewport_size = 0);
+    static void update(const Csm::CubismModel *model, const Array meshes, Array masks, const float ppunit);
     
     static void update_material(const Csm::CubismModel *model, const Csm::csmInt32 index, MeshInstance2D *mesh);
 

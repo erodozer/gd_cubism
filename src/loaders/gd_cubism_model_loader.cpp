@@ -83,13 +83,29 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
     target_node->add_child(meshes);
     meshes->set_owner(target_node);
 
-    Node *masks = memnew(Node);
+    Array mesh_instances;
+    mesh_instances.resize(model->GetDrawableCount());
+
+    // create viewport for rendering masks within
+    SubViewport* masks = memnew(SubViewport);
     masks->set_name("Masks");
+    masks->set_size(Vector2i(2048, 2048));
+    masks->set_disable_3d(true);
+    masks->set_clear_mode(SubViewport::ClearMode::CLEAR_MODE_ALWAYS);
+    // set_update_mode must be specified
+    masks->set_update_mode(SubViewport::UpdateMode::UPDATE_WHEN_VISIBLE);
+    masks->set_disable_input(true);
+    // Memory leak when set_use_own_world_3d is true
+    // https://github.com/godotengine/godot/issues/81476
+    masks->set_use_own_world_3d(false);
+    // Memory leak when set_transparent_background is true(* every time & window minimize)
+    // https://github.com/godotengine/godot/issues/89651
+    masks->set_transparent_background(true);
+    
     target_node->add_child(masks);
     masks->set_owner(target_node);
 
-    Array mesh_instances;
-    mesh_instances.resize(model->GetDrawableCount());
+    uint32_t mask_count = 0;
 
     for (Csm::csmInt32 index = 0; index < model->GetDrawableCount(); index++)
     {
@@ -114,6 +130,7 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
 
 		InternalCubismRenderer2D::update_mesh(model, index, ary_mesh, ppunit);
         InternalCubismRenderer2D::update_material(model, index, node);
+
         node->set_name(node_name);
         node->set_instance_shader_parameter("tex_idx", model->GetDrawableTextureIndex(index));
         node->set_z_index(renderOrder[index]);
@@ -134,30 +151,31 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
         mat = mat->duplicate();
         node->set_material(mat);
         
-        SubViewport* viewport = memnew(SubViewport);
-        viewport->set_disable_3d(true);
-        viewport->set_clear_mode(SubViewport::ClearMode::CLEAR_MODE_ALWAYS);
-        // set_update_mode must be specified
-        viewport->set_update_mode(SubViewport::UpdateMode::UPDATE_WHEN_VISIBLE);
-        viewport->set_disable_input(true);
-        // Memory leak when set_use_own_world_3d is true
-        // https://github.com/godotengine/godot/issues/81476
-        viewport->set_use_own_world_3d(false);
-        // Memory leak when set_transparent_background is true(* every time & window minimize)
-        // https://github.com/godotengine/godot/issues/89651
-        viewport->set_transparent_background(true);
-
         // canvas transform only available after the viewport canvas has been initialized
         // on load the mask will not be the right size or offset, but will be corrected immediately on first update
         AABB bounds = node->get_mesh()->get_aabb();
         Vector2i viewport_size = Vector2i(bounds.size.x, bounds.size.y);
         Vector2 viewport_offset = Vector2(bounds.position.x, bounds.position.y);
-        viewport->set_size(Vector2i(2,2));
-        mat->set_shader_parameter("canvas_size", vct_size);
-        mat->set_shader_parameter("mesh_offset", viewport_offset);
+        node->set_instance_shader_parameter("canvas_size", vct_size);
+        node->set_instance_shader_parameter("mesh_offset", viewport_offset);
 
-        masks->add_child(viewport);
-        viewport->set_owner(target_node);
+        Node2D* mask = memnew(Node2D);
+        masks->add_child(mask);
+        mask->set_owner(target_node);
+        mask->set_name(node_name);
+
+        Color channel;
+        if (mask_count % 4 == 1) {
+            channel = Color(1,0,0,0);
+        } else if (mask_count % 4 == 2) {
+            channel = Color(0,1,0,0);
+        } else if (mask_count % 4 == 3) {
+            channel = Color(0,0,1,0);
+        } else {
+            channel = Color(0,0,0,1);
+        }
+
+        node->set_instance_shader_parameter("channel", channel);
         
         String hash_name;
 
@@ -190,27 +208,63 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
             node->set_meta("index", j);
             node->set_meta("mask_index", m_index);
             node->set_instance_shader_parameter("tex_idx", model->GetDrawableTextureIndex(j));
+            node->set_instance_shader_parameter("channel", channel);
             node->set_visible(true);
 
-            viewport->add_child(node);
+            mask->add_child(node);
             node->set_owner(target_node);
         }
 
         // check if mask exists
         String vp_hash = String::num_int64(hash_name.hash());
-        node->set_meta("viewport", NodePath("../../Masks/" + vp_hash));
+        node->set_meta("mask", NodePath("../../Masks/" + vp_hash));
         NodePath mesh_path = NodePath("../../Meshes/" + node_name);
         Array vp_meshes;
 
         if (masks->has_node(vp_hash)) {
-            memdelete(viewport);
-            viewport = Object::cast_to<SubViewport>(masks->get_node_or_null(NodePath(vp_hash)));
-            vp_meshes = viewport->get_meta("meshes");
+            memdelete(mask);
+            mask = Object::cast_to<Node2D>(masks->get_node_or_null(NodePath(vp_hash)));
+            vp_meshes = mask->get_meta("meshes");
         } else {
-            viewport->set_name(vp_hash);
+            mask->set_name(vp_hash);
+            mask->set_meta("mask_idx", mask_count);
+            mask_count += 1;
         }
         vp_meshes.append(mesh_path);
-        viewport->set_meta("meshes", vp_meshes);
+        mask->set_meta("meshes", vp_meshes);
+    }
+
+    Vector2i cells = Vector2i(1, 1);
+    uint32_t channels = 4;
+    if (mask_count <= 4) {
+        cells = Vector2i(1, 1);
+    } else if (mask_count <= 8) {
+        cells = Vector2i(2, 1);
+    } else if (mask_count <= 16) {
+        cells = Vector2i(2, 2);
+    } else {
+        cells = Vector2i(3, 3);
+    }
+
+    for (int i = 0, j = 0, k = 0; i < mask_count; i++, j = (j + 1) % 4, k = i / 4) {
+        Node2D* mask = Object::cast_to<Node2D>(masks->get_child(i));
+        Vector4 layout(
+            double(k % cells.x) / double(cells.x),
+            double((k / cells.x) % cells.y) / double(cells.y),
+            1.0 / double(cells.x),
+            1.0 / double(cells.y)
+        );
+        mask->set_meta(
+            "layout_bounds",
+            layout
+        );
+
+        Array dependent_meshes = mask->get_meta("meshes");
+        for (int n = 0; n < dependent_meshes.size(); n++) {
+            MeshInstance2D *mesh = Object::cast_to<MeshInstance2D>(mask->get_node_or_null(dependent_meshes[n]));
+            
+            mesh->set_instance_shader_parameter("mask_bounds", layout);
+        }
     }
 }
 

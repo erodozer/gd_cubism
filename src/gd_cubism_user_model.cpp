@@ -141,8 +141,7 @@ void GDCubismUserModel::advance(const double delta) {
         this->internal_model,
         this->ary_meshes,
         this->ary_masks,
-        this->pp_unit,
-        this->mask_viewport_size
+        this->pp_unit
     );
 }
 
@@ -313,6 +312,8 @@ void GDCubismUserModel::prepare() {
     }
 
     Node *meshes = this->get_node_or_null(NodePath(MESHES_NODE));
+    SubViewport *masks = Object::cast_to<SubViewport>(this->get_node_or_null(NodePath(MASKS_NODE)));
+    Ref<Texture2D> mask_texture = masks->get_texture();
     if (meshes != nullptr) {
         for (int i = 0; i < meshes->get_child_count(); i++) {
             MeshInstance2D *mesh = Object::cast_to<MeshInstance2D>(meshes->get_child(i));
@@ -322,20 +323,14 @@ void GDCubismUserModel::prepare() {
             this->dict_mesh[mesh->get_name()] = mesh;
 
             // reconnect masks to their viewports, which have a tendency to not save properly in packecscenes
-            if (!mesh->has_meta("viewport")) continue;
-
-            NodePath viewport_path = mesh->get_meta("viewport");
-            SubViewport *viewport = Object::cast_to<SubViewport>(mesh->get_node_or_null(viewport_path));
-            if (viewport == nullptr) continue;
-
             Ref<ShaderMaterial> mat = mesh->get_material();
-            mat->set_shader_parameter("tex_mask", viewport->get_texture());
+            mat->set_shader_parameter("tex_mask", mask_texture);
         }
     }
-    Node *masks = this->get_node_or_null(NodePath(MASKS_NODE));
+    
     if (masks != nullptr) {
         for (int i = 0; i < masks->get_child_count(); i++) {
-            SubViewport *mask = Object::cast_to<SubViewport>(masks->get_child(i));
+            Node2D *mask = Object::cast_to<Node2D>(masks->get_child(i));
             if (mask == nullptr) continue;
 
             this->ary_masks.append(mask);
