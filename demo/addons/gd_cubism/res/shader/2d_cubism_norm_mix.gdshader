@@ -12,19 +12,21 @@ instance uniform vec4 color_multiply: source_color;
 #include "cubism_mask.gdshaderinc"
 
 void fragment() {
-	if (discard_mask()) {
-		discard;
-	}
-	
-    vec4 color_tex = SAMPLE_TEX;
+	vec4 modulate = COLOR;
+	vec4 color_tex = SAMPLE_TEX;
     color_tex.rgb = color_tex.rgb * color_multiply.rgb;
 
     // premul alpha
     color_tex.rgb = (color_tex.rgb + color_screen.rgb) - (color_tex.rgb * color_screen.rgb);
 
 	if (has_mask) {
-	    vec4 color_for_mask = sample_mask(color_tex, color_base);
-	    COLOR = color_for_mask * modulate;
+		vec4 color_for_mask = color_tex * color_base;
+    	color_for_mask.rgb = color_for_mask.rgb * color_for_mask.a;
+		
+	    if (mask < 0.0) {
+			discard;
+		}
+	    COLOR = color_for_mask * modulate * mask;
 	} else {
 		// premul alpha
 	    vec4 color = color_tex * color_base * modulate;

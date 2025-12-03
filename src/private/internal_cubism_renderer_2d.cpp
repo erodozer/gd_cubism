@@ -157,7 +157,7 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
             Ref<ArrayMesh> mesh = Object::cast_to<MeshInstance2D>(mask->get_child(n))->get_mesh();
             aabb = aabb.merge(mesh->get_custom_aabb());
         }
-        aabb = aabb.grow(4); // adds padding around the mask for safety
+        //aabb = aabb.grow(4); // adds padding around the mask for safety
 
         Rect2 bounds(aabb.position.x, aabb.position.y, aabb.size.x, aabb.size.y);
 
@@ -165,11 +165,14 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
         Vector2 mask_size = bounds.size;
         Vector2 cell_size = layout_bounds.size;
         Transform2D target_bounds = Transform2D(0, -bounds.position);
-        double scalar = 1.0;
         
+        // scale to fit maintaining aspect ratio
         if (mask_size.x > cell_size.x || mask_size.y > cell_size.y) {
-            scalar = cell_size.x / Math::max(mask_size.x, mask_size.y);
-            target_bounds = target_bounds.scaled(Vector2(scalar, scalar));
+            auto w_ratio = cell_size.x / mask_size.x;
+            auto h_ratio = cell_size.y / mask_size.y;
+            auto ratio = Math::min(w_ratio, h_ratio);
+            Vector2 scalar = Vector2(ratio, ratio);
+            target_bounds = target_bounds.scaled(scalar);
         }
         target_bounds = target_bounds.translated(layout_bounds.position);
         mask->set_transform(target_bounds);
@@ -179,7 +182,7 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
             MeshInstance2D *mesh = Object::cast_to<MeshInstance2D>(mask->get_node_or_null(dependent_meshes[n]));
 
             mesh->set_instance_shader_parameter("mask_rect", Vector4(bounds.position.x, bounds.position.y, bounds.size.x, bounds.size.y));
-            mesh->set_instance_shader_parameter("layout_rect", Vector4(layout_bounds.position.x, layout_bounds.position.y, layout_bounds.size.x, layout_bounds.size.y));
+            mesh->set_instance_shader_parameter("mask_scale", target_bounds.get_scale());
         }
     }
 }

@@ -2,6 +2,7 @@
 #include <godot_cpp/classes/resource_saver.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/back_buffer_copy.hpp>
 #include <godot_cpp/classes/placeholder_texture2d.hpp>
 #include <godot_cpp/classes/sub_viewport.hpp>
 #include <godot_cpp/classes/file_access.hpp>
@@ -105,6 +106,7 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
     target_node->add_child(masks);
     masks->set_owner(target_node);
 
+    // count unique number of masks made over the course of building the model
     uint32_t mask_count = 0;
 
     for (Csm::csmInt32 index = 0; index < model->GetDrawableCount(); index++)
@@ -164,19 +166,6 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
         mask->set_owner(target_node);
         mask->set_name(node_name);
 
-        Color channel;
-        if (mask_count % 4 == 1) {
-            channel = Color(1,0,0,0);
-        } else if (mask_count % 4 == 2) {
-            channel = Color(0,1,0,0);
-        } else if (mask_count % 4 == 3) {
-            channel = Color(0,0,1,0);
-        } else {
-            channel = Color(0,0,0,1);
-        }
-
-        node->set_instance_shader_parameter("channel", channel);
-        
         String hash_name;
 
         for (Csm::csmInt32 m_index = 0; m_index < model->GetDrawableMaskCounts()[index]; m_index++)
@@ -199,16 +188,14 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
             } else {
                 mesh_instances[j] = node->get_mesh();
             }
-            Ref<ShaderMaterial> mat = base_materials[GD_CUBISM_SHADER_MASK];
             
             node->set_name(mask_name);
-            node->set_material(mat);
-            
+            node->set_texture(textures[model->GetDrawableTextureIndex(j)]);
+            node->set_material(base_materials[GD_CUBISM_SHADER_MASK]);
+        
             node->set_z_index(renderOrder[j]);
             node->set_meta("index", j);
             node->set_meta("mask_index", m_index);
-            node->set_instance_shader_parameter("tex_idx", model->GetDrawableTextureIndex(j));
-            node->set_instance_shader_parameter("channel", channel);
             node->set_visible(true);
 
             mask->add_child(node);
@@ -227,7 +214,6 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
             vp_meshes = mask->get_meta("meshes");
         } else {
             mask->set_name(vp_hash);
-            mask->set_meta("mask_idx", mask_count);
             mask_count += 1;
         }
         vp_meshes.append(mesh_path);
@@ -246,11 +232,11 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
         cells = Vector2i(3, 3);
     }
 
-    for (int i = 0, j = 0, k = 0; i < mask_count; i++, j = (j + 1) % 4, k = i / 4) {
-        Node2D* mask = Object::cast_to<Node2D>(masks->get_child(i));
+    for (int i = 0, j = 0, channel = 0, x = 0, y = 0; i < mask_count; i++, x = i % cells.x, y = (i / cells.x) % cells.y, channel = i / (cells.y * cells.x)) {
+        Node2D *mask = Object::cast_to<Node2D>(masks->get_child(i));
         Vector4 layout(
-            double(k % cells.x) / double(cells.x),
-            double((k / cells.x) % cells.y) / double(cells.y),
+            double(x) / double(cells.x),
+            double(y) / double(cells.y),
             1.0 / double(cells.x),
             1.0 / double(cells.y)
         );
@@ -259,11 +245,28 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
             layout
         );
 
+        Color color;
+        if (channel == 1) {
+            color = Color(1,0,0,0);
+        } else if (channel == 2) {
+            color = Color(0,1,0,0);
+        } else if (channel == 3) {
+            color = Color(0,0,1,0);
+        } else {
+            color = Color(0,0,0,1);
+        }
+
+        for (int n = 0; n < mask->get_child_count(); n++) {
+            MeshInstance2D *mesh = Object::cast_to<MeshInstance2D>(mask->get_child(n));
+            mesh->set_instance_shader_parameter("channel", color);
+        }
+
         Array dependent_meshes = mask->get_meta("meshes");
         for (int n = 0; n < dependent_meshes.size(); n++) {
             MeshInstance2D *mesh = Object::cast_to<MeshInstance2D>(mask->get_node_or_null(dependent_meshes[n]));
             
             mesh->set_instance_shader_parameter("mask_bounds", layout);
+            mesh->set_instance_shader_parameter("channel", color);
         }
     }
 }
