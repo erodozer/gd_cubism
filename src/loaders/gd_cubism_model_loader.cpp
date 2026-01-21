@@ -113,7 +113,6 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
 		InternalCubismRenderer2D::update_mesh(model, index, ary_mesh, ppunit);
         InternalCubismRenderer2D::update_material(model, index, node);
         node->set_name(node_name);
-        node->set_z_index(renderOrder[index]);
         node->set_meta("index", index);
         node->set_texture(textures[model->GetDrawableTextureIndex(index)]);
 		

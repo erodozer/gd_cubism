@@ -113,6 +113,9 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
     const Transform2D viewport_transform = mesh_0->get_global_transform_with_canvas();
     const Rect2 viewport_bounds = mesh_0->get_viewport_rect();
 
+    Array ordered_meshes;
+    ordered_meshes.resize(model->GetDrawableCount());
+
     for (int i = 0; i < meshes.size(); i++)
     {
         MeshInstance2D *node = Object::cast_to<MeshInstance2D>(meshes[i]);
@@ -127,7 +130,8 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
 
         InternalCubismRenderer2D::update_mesh(model, index, ary_mesh, ppunit);
         InternalCubismRenderer2D::update_material(model, index, node);
-        node->set_z_index(renderOrder[index]);
+
+        ordered_meshes[renderOrder[index]] = node;
 
         // adjust real bounds to prevent the mesh being culled
         AABB bounds = ary_mesh->get_custom_aabb();
@@ -136,6 +140,20 @@ void InternalCubismRenderer2D::update(const CubismModel *model, Array meshes, Ar
             node->get_canvas_item(), true,
             canvas_bounds
         );
+    }
+
+    // reorder meshes if dirty to properly maintain z-index
+    // if Godot ever implements sorting groups (https://github.com/godotengine/godot-proposals/issues/9428)
+    // then we will be able to sensibly use z-index
+    // but as long as z-index is a global sort order, it's better for use the scene tree
+    // and pray that a model isn't constantly changing its render order
+    for (int i = 0, n = 0; i < ordered_meshes.size(); i++) {
+        Node *node = Object::cast_to<Node>(ordered_meshes[i]);
+        if (node == nullptr) continue;
+
+        // use secondary index because some drawables do not exist, making our z-index not match with scene index
+        node->get_parent()->move_child(node, n);
+        n++;
     }
 
     for (int i = 0; i < masks.size(); i++)
