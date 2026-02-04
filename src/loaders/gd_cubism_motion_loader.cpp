@@ -45,15 +45,32 @@ Ref<AnimationLibrary> GDCubismMotionLoader::load_motion_library(GDCubismUserMode
         Ref<Animation> reset_anim;
         reset_anim.instantiate();
 
-        Dictionary params = model->get_parameters();
-        Array keys = params.keys();
-        for (int i = 0; i < params.size(); i++) {
-            String p_name = keys[i];
-            int track_idx = reset_anim->add_track(Animation::TYPE_BEZIER);
-            Dictionary p = params[p_name];
-            reset_anim->track_set_path(track_idx, NodePath(".:" + p_name));
-            reset_anim->bezier_track_insert_key(track_idx, 0, (float)p["default"]);
+        // reset parameters
+        {
+            Dictionary params = model->get_parameters();
+            Array keys = params.keys();
+            for (int i = 0; i < params.size(); i++) {
+                String p_name = keys[i];
+                int track_idx = reset_anim->add_track(Animation::TYPE_BEZIER);
+                Dictionary p = params[p_name];
+                reset_anim->track_set_path(track_idx, NodePath(".:" + p_name));
+                reset_anim->bezier_track_insert_key(track_idx, 0, (float)p["default"]);
+            }
         }
+
+        // reset part opacities
+        {
+            Dictionary parts = model->get_parts();
+            Array keys = parts.keys();
+            for (int i = 0; i < parts.size(); i++) {
+                String p_name = keys[i];
+                int track_idx = reset_anim->add_track(Animation::TYPE_BEZIER);
+                Dictionary p = parts[p_name];
+                reset_anim->track_set_path(track_idx, NodePath(".:" + p_name));
+                reset_anim->bezier_track_insert_key(track_idx, 0, (float)p["default"]);
+            }
+        }
+        reset_anim->set_length(0.001);
 
         animations->add_animation("RESET", reset_anim);
     }
@@ -95,11 +112,6 @@ Variant GDCubismMotionLoader::_load(const String& p_path, const String& p_origin
     Array curves = motion["Curves"];
     for (uint32_t c_idx = 0; c_idx < curves.size(); c_idx++) {
         Dictionary curve = curves[c_idx];
-
-        // TODO only support parameter type curves for now
-        if (curve["Target"] != "Parameter") {
-            continue;
-        }
 
         String property = curve["Id"];
         Array segments = curve["Segments"];
