@@ -89,6 +89,9 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
     Array mesh_instances;
     mesh_instances.resize(model->GetDrawableCount());
 
+    Array ordered_meshes;
+    ordered_meshes.resize(model->GetDrawableCount());
+
     for (Csm::csmInt32 index = 0; index < model->GetDrawableCount(); index++)
     {
         if (model->GetDrawableVertexCount(index) == 0)
@@ -121,6 +124,8 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
 
         meshes->add_child(node);
         node->set_owner(target_node);
+
+        ordered_meshes[renderOrder[index]] = node;
 
         // build mask
         if (model->GetDrawableMaskCounts()[index] == 0) continue;
@@ -208,6 +213,16 @@ void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textu
         }
         vp_meshes.append(mesh_path);
         viewport->set_meta("meshes", vp_meshes);
+    }
+
+    // reorder meshes if dirty to properly maintain z-index
+    for (int i = 0, n = 0; i < ordered_meshes.size(); i++) {
+        Node *node = Object::cast_to<Node>(ordered_meshes[i]);
+        if (node == nullptr) continue;
+
+        // use secondary index because some drawables do not exist, making our z-index not match with scene index
+        node->get_parent()->move_child(node, n);
+        n++;
     }
 }
 
