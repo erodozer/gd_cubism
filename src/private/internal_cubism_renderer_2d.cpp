@@ -36,8 +36,11 @@ const Vector4 make_vector4(const Live2D::Cubism::Core::csmVector4 &src_vec4);
 void InternalCubismRenderer2D::update_material(const Csm::CubismModel *model, const Csm::csmInt32 index, MeshInstance2D *mesh)
 {
     mesh->set_instance_shader_parameter("color_base", Vector4(1.0, 1.0, 1.0, model->GetDrawableOpacity(index)));
-    mesh->set_instance_shader_parameter("color_screen", make_vector4(model->GetDrawableScreenColor(index)));
-    mesh->set_instance_shader_parameter("color_multiply", make_vector4(model->GetDrawableMultiplyColor(index)));
+
+    if (!mesh->get_instance_shader_parameter("color_override")) { 
+        mesh->set_instance_shader_parameter("color_screen", make_vector4(model->GetDrawableScreenColor(index)));
+        mesh->set_instance_shader_parameter("color_multiply", make_vector4(model->GetDrawableMultiplyColor(index)));
+    }
 }
 
 void InternalCubismRenderer2D::update_mesh(

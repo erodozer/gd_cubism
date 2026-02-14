@@ -7,6 +7,7 @@ render_mode blend_mul, unshaded;
 instance uniform vec4 color_base: source_color;
 instance uniform vec4 color_screen: source_color;
 instance uniform vec4 color_multiply: source_color;
+instance uniform bool color_override;
 
 #include "cubism_mask.gdshaderinc"
 
@@ -16,7 +17,7 @@ void fragment() {
 	}
 	
     vec4 color_tex = texture(TEXTURE, UV);
-    color_tex.rgb = color_tex.rgb * color_multiply.rgb;
+    color_tex.rgba = color_tex.rgba * color_multiply.rgba;
 
     // premul alpha
     color_tex.rgb = color_tex.rgb + color_screen.rgb - (color_tex.rgb * color_screen.rgb);
