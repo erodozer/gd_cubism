@@ -17,7 +17,7 @@ using namespace Live2D::Cubism::Framework::Rendering;
 // ------------------------------------------------------------------ static(s)
 // ----------------------------------------------------------- class:forward(s)
 // ------------------------------------------------------------------- class(s)
-CubismRenderer* CubismRenderer::Create() {
+CubismRenderer* CubismRenderer::Create(csmUint32 width, csmUint32 height) {
     return nullptr;
 }
 

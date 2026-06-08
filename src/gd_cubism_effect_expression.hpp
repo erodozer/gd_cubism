@@ -38,10 +38,9 @@ public:
 	void set_expression(String motion) {
 		if (this->_expressionManager != nullptr) {
 			if(this->_expressions[motion] != nullptr) {
-				this->_expressionManager->StartMotionPriority(
+				this->_expressionManager->StartMotion(
 					this->_expressions[motion],
-					false,
-					GDCubismUserModel::Priority::PRIORITY_FORCE
+					false
 				);
 			} else {
 				this->_expressionManager->StopAllMotions();

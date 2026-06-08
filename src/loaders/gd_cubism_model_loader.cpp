@@ -32,7 +32,7 @@ MeshInstance2D* request_mesh_instance() {
 
 Ref<ShaderMaterial> request_shader_material(const Csm::CubismModel *model, const Csm::csmInt32 index, Array shaders) {
     GDCubismShader e = GD_CUBISM_SHADER_NORM_MIX;
-    switch (model->GetDrawableBlendMode(index))
+    switch (model->GetDrawableBlendModeType(index).GetColorBlendType())
     {
         case CubismRenderer::CubismBlendMode_Additive:
             e = GD_CUBISM_SHADER_NORM_ADD;
@@ -52,7 +52,7 @@ Ref<ShaderMaterial> request_shader_material(const Csm::CubismModel *model, const
 }
 
 void build_model(CubismModel* model, GDCubismUserModel* target_node, Array textures, Array shaders) {
-	const Csm::csmInt32 *renderOrder = model->GetDrawableRenderOrders();
+	const Csm::csmInt32 *renderOrder = model->GetRenderOrders();
     const Csm::csmInt32 *maskCount = model->GetDrawableMaskCounts();
 
     const Vector2 vct_size = target_node->get_size();
